@@ -1,0 +1,1531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inspect360 | SIH26095 Smart Real-Time Monitoring & Inspection</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            gov: {
+              50: '#f0f5fa',
+              100: '#e1ecf5',
+              600: '#0284c7',
+              700: '#0369a1',
+              800: '#075985',
+              900: '#0c4a6e',
+              deep: '#0a192f'
+            },
+            saffron: '#ff9933',
+            indiaGreen: '#138808'
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Leaflet CSS & JS for OpenStreetMap -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .font-mono-code {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    /* Phone frame simulation */
+    .mobile-frame {
+      width: 390px;
+      height: 780px;
+      border-radius: 44px;
+      box-shadow: 0 25px 60px -15px rgba(0,0,0,0.35), 0 0 0 12px #1e293b;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .notch {
+      width: 150px;
+      height: 24px;
+      background: #1e293b;
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      border-bottom-left-radius: 14px;
+      border-bottom-right-radius: 14px;
+      z-index: 50;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background-color: #cbd5e1;
+      border-radius: 4px;
+    }
+    .glass-nav {
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(12px);
+    }
+    .radar-pulse {
+      position: relative;
+    }
+    .radar-pulse::after {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      background: inherit;
+      border-radius: inherit;
+      animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+    }
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      100% { transform: scale(2.2); opacity: 0; }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
+
+  <!-- TOP GOV BANNER -->
+  <div class="bg-gradient-to-r from-orange-600 via-white to-green-700 h-1"></div>
+  <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        
+        <!-- Left: Brand & MoSJE Details -->
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center font-bold text-lg shadow-inner text-white">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="font-extrabold tracking-tight text-lg text-white">Inspect<span class="text-blue-400">360</span></span>
+              <span class="text-xs bg-blue-900 text-blue-200 px-2 py-0.5 rounded-full font-semibold border border-blue-700">SIH26095</span>
+            </div>
+            <p class="text-[11px] text-slate-400 hidden sm:block">Ministry of Social Justice & Empowerment • Team Smart Inspect (AMP2026018)</p>
+          </div>
+        </div>
+
+        <!-- Center: Primary Navigation Tabs -->
+        <nav class="hidden md:flex items-center space-x-1 bg-slate-800/80 p-1 rounded-xl border border-slate-700/60">
+          <button onclick="switchTab('dashboard')" id="nav-dashboard" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-2 transition bg-blue-600 text-white shadow-sm">
+            <i class="fa-solid fa-chart-pie"></i>
+            <span>Ministry Dashboard</span>
+          </button>
+          <button onclick="switchTab('mobile-app')" id="nav-mobile-app" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-2 transition text-slate-300 hover:text-white hover:bg-slate-700/50">
+            <i class="fa-solid fa-mobile-screen-button"></i>
+            <span>Inspector Mobile App</span>
+          </button>
+          <button onclick="switchTab('gis-map')" id="nav-gis-map" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-2 transition text-slate-300 hover:text-white hover:bg-slate-700/50">
+            <i class="fa-solid fa-map-location-dot"></i>
+            <span>GIS Live Tracking</span>
+          </button>
+          <button onclick="switchTab('ai-assign')" id="nav-ai-assign" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-2 transition text-slate-300 hover:text-white hover:bg-slate-700/50">
+            <i class="fa-solid fa-brain"></i>
+            <span>AI Randomizer</span>
+          </button>
+          <button onclick="switchTab('cctv-feed')" id="nav-cctv-feed" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-2 transition text-slate-300 hover:text-white hover:bg-slate-700/50">
+            <i class="fa-solid fa-video"></i>
+            <span>Live CCTV & VC</span>
+          </button>
+          <button onclick="switchTab('reports')" id="nav-reports" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-2 transition text-slate-300 hover:text-white hover:bg-slate-700/50">
+            <i class="fa-solid fa-file-contract"></i>
+            <span>Audit Dossiers</span>
+          </button>
+        </nav>
+
+        <!-- Right: Status & Quick Role Switch -->
+        <div class="flex items-center space-x-3">
+          <div class="hidden sm:flex items-center text-xs text-emerald-400 bg-emerald-950/60 px-2.5 py-1 rounded-full border border-emerald-800">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 mr-2 animate-ping"></span>
+            Sync Live (Offline-Safe)
+          </div>
+          <button onclick="switchTab('mobile-app')" class="md:hidden text-white bg-blue-600 px-3 py-1.5 rounded-lg text-xs font-semibold">
+            <i class="fa-solid fa-mobile-screen mr-1"></i> Mobile
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Mobile Sub-Menu -->
+    <div class="md:hidden flex overflow-x-auto space-x-2 px-4 py-2 border-t border-slate-800 custom-scrollbar text-xs bg-slate-900/95">
+      <button onclick="switchTab('dashboard')" class="px-2.5 py-1 bg-slate-800 rounded-lg whitespace-nowrap text-slate-200">Dashboard</button>
+      <button onclick="switchTab('mobile-app')" class="px-2.5 py-1 bg-slate-800 rounded-lg whitespace-nowrap text-slate-200">Mobile App</button>
+      <button onclick="switchTab('gis-map')" class="px-2.5 py-1 bg-slate-800 rounded-lg whitespace-nowrap text-slate-200">GIS Map</button>
+      <button onclick="switchTab('ai-assign')" class="px-2.5 py-1 bg-slate-800 rounded-lg whitespace-nowrap text-slate-200">AI Randomizer</button>
+      <button onclick="switchTab('cctv-feed')" class="px-2.5 py-1 bg-slate-800 rounded-lg whitespace-nowrap text-slate-200">Live CCTV</button>
+      <button onclick="switchTab('reports')" class="px-2.5 py-1 bg-slate-800 rounded-lg whitespace-nowrap text-slate-200">Audit Dossiers</button>
+    </div>
+  </header>
+
+  <!-- MAIN VIEWPORT CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+
+    <!-- ========================================================================= -->
+    <!-- SECTION 1: MINISTRY OF SOCIAL JUSTICE DASHBOARD (DEFAULT VIEW)            -->
+    <!-- ========================================================================= -->
+    <section id="view-dashboard" class="space-y-6">
+      
+      <!-- Top Alert Notification Bar -->
+      <div class="bg-gradient-to-r from-blue-900 to-indigo-900 rounded-2xl p-5 text-white shadow-xl relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div class="absolute -right-8 -top-8 w-44 h-44 bg-blue-500/10 rounded-full blur-2xl pointer-events-none"></div>
+        <div>
+          <div class="flex items-center space-x-2 mb-1">
+            <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500 text-slate-900 uppercase tracking-wider">MoSJE Central Portal</span>
+            <span class="text-xs text-blue-200">• Real-Time Inspection & Fraud Deterrence Network</span>
+          </div>
+          <h1 class="text-xl sm:text-2xl font-bold tracking-tight">Smart Real-Time Monitoring & Inspection Platform</h1>
+          <p class="text-sm text-slate-300 max-w-2xl mt-1">
+            Centrally monitoring 128 active social justice schemes, PMU surprise teams, AI geofence-tagged audits, and tamper-resistant evidence feeds.
+          </p>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <button onclick="triggerNewSimulatedInspection()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs px-4 py-2.5 rounded-xl shadow-lg transition flex items-center">
+            <i class="fa-solid fa-plus-circle mr-2"></i> Simulate Field Inspection
+          </button>
+          <button onclick="exportDataToCSV()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white text-xs px-3.5 py-2.5 rounded-xl transition flex items-center">
+            <i class="fa-solid fa-download mr-1.5"></i> Export CSV
+          </button>
+        </div>
+      </div>
+
+      <!-- KPI METRIC CARDS -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow transition">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Active Schemes</span>
+            <span class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-sm font-bold"><i class="fa-solid fa-landmark"></i></span>
+          </div>
+          <div class="mt-3 flex items-baseline space-x-2">
+            <span class="text-3xl font-extrabold text-slate-900" id="kpi-total-projects">128</span>
+            <span class="text-xs font-semibold text-emerald-600"><i class="fa-solid fa-arrow-trend-up mr-0.5"></i> +12% MoM</span>
+          </div>
+          <div class="mt-2 text-xs text-slate-500">Residential Schools, Hostels & NGOs</div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow transition">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Completed Field Audits</span>
+            <span class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm font-bold"><i class="fa-solid fa-clipboard-check"></i></span>
+          </div>
+          <div class="mt-3 flex items-baseline space-x-2">
+            <span class="text-3xl font-extrabold text-slate-900" id="kpi-completed-inspections">94</span>
+            <span class="text-xs font-semibold text-emerald-600"><i class="fa-solid fa-shield-check mr-0.5"></i> 100% Geo-tagged</span>
+          </div>
+          <div class="mt-2 text-xs text-slate-500">With GPS & timestamp verification</div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow transition">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Pending / In Progress</span>
+            <span class="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-sm font-bold"><i class="fa-solid fa-hourglass-half"></i></span>
+          </div>
+          <div class="mt-3 flex items-baseline space-x-2">
+            <span class="text-3xl font-extrabold text-slate-900" id="kpi-pending-inspections">34</span>
+            <span class="text-xs font-semibold text-amber-600">Surprise assignments active</span>
+          </div>
+          <div class="mt-2 text-xs text-slate-500">Target response time: &lt; 2 hrs</div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-red-200 shadow-sm hover:shadow transition bg-red-50/20">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-red-600 uppercase tracking-wider">AI Anomaly Alerts</span>
+            <span class="w-9 h-9 rounded-xl bg-red-100 text-red-600 flex items-center justify-center text-sm font-bold"><i class="fa-solid fa-triangle-exclamation"></i></span>
+          </div>
+          <div class="mt-3 flex items-baseline space-x-2">
+            <span class="text-3xl font-extrabold text-red-600" id="kpi-anomaly-count">6</span>
+            <span class="text-xs font-semibold text-red-600 bg-red-100 px-1.5 py-0.5 rounded">Action Required</span>
+          </div>
+          <div class="mt-2 text-xs text-slate-500">Proxy logs, GPS deviation, low headcount</div>
+        </div>
+      </div>
+
+      <!-- CHARTS & REAL-TIME ALERTS ROW -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Inspection Distribution Chart -->
+        <div class="lg:col-span-2 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-base font-bold text-slate-900">Inspection & Audit Performance Trends</h2>
+              <p class="text-xs text-slate-500">Weekly inspection volume: Routine vs. AI Surprise Visits</p>
+            </div>
+            <span class="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg">Last 7 Days</span>
+          </div>
+          <div class="h-64">
+            <canvas id="inspectionsChart"></canvas>
+          </div>
+        </div>
+
+        <!-- AI Anomaly Detection Feed -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center space-x-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
+              <h2 class="text-base font-bold text-slate-900">AI Fraud & Anomaly Feed</h2>
+            </div>
+            <span class="text-[11px] font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded">Automated Rules</span>
+          </div>
+          <p class="text-xs text-slate-500 mb-4">Automatic flagging based on geofence mismatch, ghost beneficiaries, and CCTV headcounts.</p>
+
+          <div class="space-y-3 flex-1 overflow-y-auto pr-1 max-h-64 custom-scrollbar" id="anomaly-feed-container">
+            <!-- Anomaly 1 -->
+            <div class="p-3 rounded-xl border border-red-200 bg-red-50/50 text-xs">
+              <div class="flex items-center justify-between text-red-800 font-bold mb-1">
+                <span><i class="fa-solid fa-location-crosshairs mr-1"></i> Geofence Deviation (450m)</span>
+                <span class="text-[10px] text-slate-500">12 min ago</span>
+              </div>
+              <p class="text-slate-700">Inspector upload coords did not match registered Skill Centre latitude.</p>
+              <div class="mt-2 flex items-center justify-between text-[11px]">
+                <span class="font-mono-code text-slate-600 font-bold">INS-20489 • Deoghar</span>
+                <button onclick="switchTab('reports')" class="text-red-700 underline font-semibold">Investigate</button>
+              </div>
+            </div>
+
+            <!-- Anomaly 2 -->
+            <div class="p-3 rounded-xl border border-amber-200 bg-amber-50/60 text-xs">
+              <div class="flex items-center justify-between text-amber-800 font-bold mb-1">
+                <span><i class="fa-solid fa-users-viewfinder mr-1"></i> Beneficiary Headcount Discrepancy</span>
+                <span class="text-[10px] text-slate-500">1 hr ago</span>
+              </div>
+              <p class="text-slate-700">Report claims 60 students present; CCTV AI detected only 18 active persons.</p>
+              <div class="mt-2 flex items-center justify-between text-[11px]">
+                <span class="font-mono-code text-slate-600 font-bold">INS-20482 • Ranchi Block A</span>
+                <button onclick="switchTab('cctv-feed')" class="text-amber-700 underline font-semibold">Check CCTV</button>
+              </div>
+            </div>
+
+            <!-- Anomaly 3 -->
+            <div class="p-3 rounded-xl border border-blue-200 bg-blue-50/50 text-xs">
+              <div class="flex items-center justify-between text-blue-800 font-bold mb-1">
+                <span><i class="fa-solid fa-clock-rotate-left mr-1"></i> Late Surprise Verification</span>
+                <span class="text-[10px] text-slate-500">3 hrs ago</span>
+              </div>
+              <p class="text-slate-700">Inspection started 90 mins after random dispatch alert was received.</p>
+              <div class="mt-2 flex items-center justify-between text-[11px]">
+                <span class="font-mono-code text-slate-600 font-bold">INS-20475 • Hazaribagh</span>
+                <span class="text-blue-700 font-semibold">Flagged to PMU</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RECENT INSPECTION DATA TABLE -->
+      <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 class="text-base font-bold text-slate-900">Recent Field Inspections & Evidence Dossiers</h2>
+            <p class="text-xs text-slate-500">Live submissions synchronized from mobile inspection units</p>
+          </div>
+          <div class="flex items-center space-x-2">
+            <input type="text" id="table-search" onkeyup="filterInspectionTable()" placeholder="Search project, ID, inspector..." class="text-xs border border-slate-300 rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-600 w-48 sm:w-64">
+            <select id="table-filter-type" onchange="filterInspectionTable()" class="text-xs border border-slate-300 rounded-lg px-2 py-1.5 focus:outline-none focus:border-blue-600">
+              <option value="ALL">All Types</option>
+              <option value="Surprise">Surprise</option>
+              <option value="Routine">Routine</option>
+              <option value="Emergency">Emergency</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs" id="inspections-table">
+            <thead class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+              <tr>
+                <th class="p-3.5">ID & Timestamp</th>
+                <th class="p-3.5">Project / Scheme Name</th>
+                <th class="p-3.5">Inspector</th>
+                <th class="p-3.5">Type</th>
+                <th class="p-3.5">GPS Verification</th>
+                <th class="p-3.5">Evidence Status</th>
+                <th class="p-3.5">Status</th>
+                <th class="p-3.5 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100" id="inspections-table-body">
+              <!-- Dynamically populated from JS storage -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- SECTION 2: INSPECTOR MOBILE APP VIEW (LIVE PWA / MOBILE SIMULATOR)        -->
+    <!-- ========================================================================= -->
+    <section id="view-mobile-app" class="hidden">
+      <div class="flex flex-col lg:flex-row items-center lg:items-start justify-center gap-10">
+        
+        <!-- Left: Instruction & Feature Highlights for Judges -->
+        <div class="lg:w-1/2 space-y-5">
+          <div class="inline-flex items-center space-x-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-bold">
+            <i class="fa-solid fa-mobile-screen"></i>
+            <span>Inspector Field Workstation (PWA)</span>
+          </div>
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            Designed for Instant, Tamper-Proof Field Verification
+          </h2>
+          <p class="text-sm text-slate-600 leading-relaxed">
+            Eliminating paper forms and post-dated fraud. Inspectors log in, receive encrypted AI assignments, verify geofenced GPS, complete structured compliance checklists, and capture stamped photo/video proof.
+          </p>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div class="p-3.5 bg-white rounded-xl border border-slate-200 shadow-sm flex items-start space-x-3">
+              <div class="p-2 rounded-lg bg-blue-50 text-blue-600 font-bold"><i class="fa-solid fa-location-dot"></i></div>
+              <div>
+                <h4 class="font-bold text-slate-900">Geofence Locking</h4>
+                <p class="text-slate-500 mt-0.5">Forms unlock only within 100m of registered institute GPS coordinates.</p>
+              </div>
+            </div>
+            <div class="p-3.5 bg-white rounded-xl border border-slate-200 shadow-sm flex items-start space-x-3">
+              <div class="p-2 rounded-lg bg-emerald-50 text-emerald-600 font-bold"><i class="fa-solid fa-stamp"></i></div>
+              <div>
+                <h4 class="font-bold text-slate-900">Hard Watermarking</h4>
+                <p class="text-slate-500 mt-0.5">Latitude, longitude, UTC time, and Inspector ID are burned onto images.</p>
+              </div>
+            </div>
+            <div class="p-3.5 bg-white rounded-xl border border-slate-200 shadow-sm flex items-start space-x-3">
+              <div class="p-2 rounded-lg bg-purple-50 text-purple-600 font-bold"><i class="fa-solid fa-wifi"></i></div>
+              <div>
+                <h4 class="font-bold text-slate-900">Offline-First Sync</h4>
+                <p class="text-slate-500 mt-0.5">Works smoothly in remote tribal regions; queues submissions for auto-sync.</p>
+              </div>
+            </div>
+            <div class="p-3.5 bg-white rounded-xl border border-slate-200 shadow-sm flex items-start space-x-3">
+              <div class="p-2 rounded-lg bg-amber-50 text-amber-600 font-bold"><i class="fa-solid fa-signature"></i></div>
+              <div>
+                <h4 class="font-bold text-slate-900">Incharge E-Signature</h4>
+                <p class="text-slate-500 mt-0.5">On-spot counter-signature by Hostel/NGO superintendent.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-4 bg-slate-900 text-white rounded-2xl flex items-center justify-between">
+            <div>
+              <span class="text-xs text-blue-400 font-bold uppercase tracking-wider">Try The Interactive Phone</span>
+              <p class="text-xs text-slate-300 mt-0.5">Fill out the form on the mobile frame, capture coordinates, and click submit.</p>
+            </div>
+            <button onclick="prefillSampleInspection()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-2 rounded-xl font-semibold transition">
+              <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Auto-Fill Demo
+            </button>
+          </div>
+        </div>
+
+        <!-- Right: Mobile Device Frame Simulation -->
+        <div class="mobile-frame bg-slate-100 border-4 border-slate-700">
+          <div class="notch"></div>
+          
+          <!-- Phone Status Bar -->
+          <div class="h-10 bg-slate-900 text-white flex items-center justify-between px-6 pt-1 text-[11px] font-semibold select-none">
+            <span id="phone-clock">09:41</span>
+            <div class="flex items-center space-x-2 text-[10px]">
+              <i class="fa-solid fa-signal"></i>
+              <i class="fa-solid fa-wifi"></i>
+              <i class="fa-solid fa-battery-full"></i>
+            </div>
+          </div>
+
+          <!-- Phone Header -->
+          <div class="bg-blue-700 text-white p-3.5 shadow-md flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <span class="w-7 h-7 rounded-lg bg-blue-800 flex items-center justify-center font-bold text-xs"><i class="fa-solid fa-clipboard-user"></i></span>
+              <div>
+                <h3 class="font-bold text-xs leading-none">Inspector Portal</h3>
+                <span class="text-[10px] text-blue-200">Insp. R. K. Verma (PMU-4)</span>
+              </div>
+            </div>
+            <span class="text-[10px] bg-emerald-500 text-slate-900 font-bold px-2 py-0.5 rounded-full">GPS Active</span>
+          </div>
+
+          <!-- Phone Scrollable Content Body -->
+          <div class="flex-1 overflow-y-auto p-3 space-y-3.5 custom-scrollbar text-xs bg-slate-50" id="phone-body">
+            
+            <!-- Assigned Task Banner -->
+            <div class="bg-gradient-to-r from-blue-900 to-indigo-800 text-white p-3 rounded-xl shadow-sm">
+              <div class="flex items-center justify-between text-[10px] font-bold text-blue-200 mb-1">
+                <span>ASSIGNED SURPRISE TASK</span>
+                <span class="bg-red-500 text-white px-1.5 py-0.2 rounded font-mono-code">DUE TODAY</span>
+              </div>
+              <h4 class="font-bold text-sm text-white" id="mobile-scheme-name">Govt. Model Residential School</h4>
+              <p class="text-[11px] text-slate-300">Block-B, Ranchi • DoSJE Special Assistance</p>
+              <div class="mt-2 flex items-center justify-between text-[10px] pt-2 border-t border-blue-700/60">
+                <span>Target: 45 Beneficiaries</span>
+                <span class="font-semibold text-emerald-300">Geofence: &lt; 80m away</span>
+              </div>
+            </div>
+
+            <!-- Geolocation Card -->
+            <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-slate-800 flex items-center"><i class="fa-solid fa-location-crosshairs text-blue-600 mr-1.5"></i> Geo-Location Lock</span>
+                <button type="button" onclick="captureMobileGPS()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-2.5 py-1 rounded-lg text-[10px] transition flex items-center">
+                  <i class="fa-solid fa-satellite-dish mr-1"></i> Capture GPS
+                </button>
+              </div>
+              <div class="bg-slate-100 p-2 rounded-lg text-[11px] font-mono-code text-slate-700 space-y-0.5">
+                <div>Lat: <span id="m-lat" class="font-bold text-blue-700">23.344100</span></div>
+                <div>Long: <span id="m-lng" class="font-bold text-blue-700">85.309600</span></div>
+                <div class="text-[10px] text-emerald-600 font-sans font-semibold">✓ Verified within registered radius</div>
+              </div>
+            </div>
+
+            <!-- Digital Inspection Checklist -->
+            <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm space-y-2">
+              <span class="font-bold text-slate-800 flex items-center"><i class="fa-solid fa-list-check text-blue-600 mr-1.5"></i> Verification Checklist</span>
+              
+              <div class="space-y-1.5 text-[11px] text-slate-700">
+                <label class="flex items-center space-x-2 p-1.5 hover:bg-slate-50 rounded cursor-pointer">
+                  <input type="checkbox" id="m-chk-infrastructure" checked class="rounded text-blue-600 focus:ring-0">
+                  <span>Physical Infrastructure & Cleanliness OK</span>
+                </label>
+                <label class="flex items-center space-x-2 p-1.5 hover:bg-slate-50 rounded cursor-pointer">
+                  <input type="checkbox" id="m-chk-attendance" checked class="rounded text-blue-600 focus:ring-0">
+                  <span>Physical Student/Beneficiary Headcount matches register</span>
+                </label>
+                <label class="flex items-center space-x-2 p-1.5 hover:bg-slate-50 rounded cursor-pointer">
+                  <input type="checkbox" id="m-chk-food" checked class="rounded text-blue-600 focus:ring-0">
+                  <span>Meal / Nutritional provision compliance</span>
+                </label>
+                <label class="flex items-center space-x-2 p-1.5 hover:bg-slate-50 rounded cursor-pointer">
+                  <input type="checkbox" id="m-chk-cctv" checked class="rounded text-blue-600 focus:ring-0">
+                  <span>Institute CCTV active & recording</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Evidence Photo with Canvas Watermarking -->
+            <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-slate-800 flex items-center"><i class="fa-solid fa-camera text-blue-600 mr-1.5"></i> Geo-Tagged Photo Proof</span>
+                <span class="text-[10px] text-slate-500 font-semibold">Auto-Watermarked</span>
+              </div>
+
+              <!-- Live Photo Capture / Simulated preview with Canvas -->
+              <div class="relative bg-slate-900 rounded-xl overflow-hidden aspect-video border border-slate-300 flex items-center justify-center">
+                <canvas id="photo-watermark-canvas" class="w-full h-full object-cover"></canvas>
+                <div id="photo-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 p-2 text-center">
+                  <i class="fa-solid fa-camera-retro text-2xl mb-1 text-slate-500"></i>
+                  <span class="text-[11px]">Click Snap or Upload to burn GPS timestamp</span>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-1.5">
+                <button type="button" onclick="snapSamplePhoto('classroom')" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-semibold py-1.5 rounded-lg text-[10px] transition text-center">
+                  <i class="fa-solid fa-camera mr-1"></i> Classroom Snap
+                </button>
+                <button type="button" onclick="snapSamplePhoto('hostel')" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-semibold py-1.5 rounded-lg text-[10px] transition text-center">
+                  <i class="fa-solid fa-utensils mr-1"></i> Dining Hall Snap
+                </button>
+              </div>
+            </div>
+
+            <!-- Inspector Observations -->
+            <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm space-y-1.5">
+              <label class="font-bold text-slate-800 flex items-center justify-between">
+                <span><i class="fa-solid fa-comment-dots text-blue-600 mr-1.5"></i> Field Remarks</span>
+                <span class="text-[10px] text-slate-400">Required</span>
+              </label>
+              <textarea id="m-remarks" rows="2" class="w-full text-[11px] p-2 rounded-lg border border-slate-300 focus:outline-none focus:border-blue-600" placeholder="State observations, discrepancies, or praise..."></textarea>
+            </div>
+
+            <!-- Incharge Digital Signature -->
+            <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm space-y-1.5">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-slate-800 flex items-center"><i class="fa-solid fa-signature text-blue-600 mr-1.5"></i> Center Head Signature</span>
+                <button type="button" onclick="clearSignaturePad()" class="text-[10px] text-red-600 font-semibold hover:underline">Clear</button>
+              </div>
+              <canvas id="signature-canvas" width="340" height="70" class="border border-dashed border-slate-300 rounded-lg w-full bg-slate-50 cursor-crosshair"></canvas>
+              <p class="text-[9px] text-slate-400 text-center">Draw signature with finger or mouse</p>
+            </div>
+
+            <!-- Action Buttons -->
+            <button type="button" onclick="submitMobileInspection()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-md text-xs transition flex items-center justify-center space-x-2">
+              <i class="fa-solid fa-cloud-arrow-up"></i>
+              <span>Upload & Synchronize Dossier</span>
+            </button>
+            <p id="m-sync-status" class="text-center text-[10px] text-emerald-600 font-semibold hidden">
+              ✓ Synchronized instantly with Ministry Portal!
+            </p>
+          </div>
+
+          <!-- Phone Home Indicator Bar -->
+          <div class="h-5 bg-slate-900 flex items-center justify-center">
+            <div class="w-28 h-1 bg-slate-600 rounded-full"></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- SECTION 3: GIS LIVE TRACKING & INTERACTIVE MAP VIEW                       -->
+    <!-- ========================================================================= -->
+    <section id="view-gis-map" class="hidden space-y-4">
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900 flex items-center">
+              <i class="fa-solid fa-map-location-dot text-blue-600 mr-2"></i>
+              Interactive GIS Project & Inspector Tracking (OpenStreetMap)
+            </h2>
+            <p class="text-xs text-slate-500">Live geo-spatial overview of verified institutes, surprise assignments, and field officers.</p>
+          </div>
+          
+          <div class="flex items-center space-x-2 text-xs">
+            <span class="inline-flex items-center text-emerald-700 font-semibold bg-emerald-50 px-2 py-1 rounded">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 mr-1.5"></span> Inspected OK
+            </span>
+            <span class="inline-flex items-center text-amber-700 font-semibold bg-amber-50 px-2 py-1 rounded">
+              <span class="w-2 h-2 rounded-full bg-amber-500 mr-1.5"></span> Assigned / In Progress
+            </span>
+            <span class="inline-flex items-center text-red-700 font-semibold bg-red-50 px-2 py-1 rounded">
+              <span class="w-2 h-2 rounded-full bg-red-500 mr-1.5"></span> Anomaly / Alert
+            </span>
+          </div>
+        </div>
+
+        <!-- Leaflet Map Container -->
+        <div id="gis-leaflet-map" class="w-full h-[520px] rounded-xl border border-slate-200 shadow-inner z-10"></div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 text-xs">
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <span class="text-slate-500 font-semibold">Active Inspector Geofences</span>
+            <div class="text-base font-bold text-slate-900 mt-1">100% Perimeter Validated</div>
+            <p class="text-[11px] text-slate-500">Real-time GPS coordinates cross-referenced against master cadastral data.</p>
+          </div>
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <span class="text-slate-500 font-semibold">Average Inspector Arrival Time</span>
+            <div class="text-base font-bold text-emerald-600 mt-1">42 Minutes</div>
+            <p class="text-[11px] text-slate-500">Rapid response enabled by automated AI routing and surprise alerts.</p>
+          </div>
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <span class="text-slate-500 font-semibold">Zero-Fraud Verification Rate</span>
+            <div class="text-base font-bold text-blue-600 mt-1">99.4% Authenticated</div>
+            <p class="text-[11px] text-slate-500">Tamper-proof EXIF metadata and device hardware signatures prevent spoofing.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- SECTION 4: AI RANDOM INSPECTION ASSIGNMENT ENGINE                         -->
+    <!-- ========================================================================= -->
+    <section id="view-ai-assign" class="hidden space-y-6">
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+        <div>
+          <div class="inline-flex items-center space-x-2 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-bold mb-2">
+            <i class="fa-solid fa-brain"></i>
+            <span>Smart Automation Component • Algorithm Simulation</span>
+          </div>
+          <h2 class="text-2xl font-bold text-slate-900">AI Random Assignment & Anti-Corruption Dispatcher</h2>
+          <p class="text-sm text-slate-600 max-w-3xl mt-1">
+            To stop inspection schedule leaks and bias, our algorithm combines <strong>pseudo-random cryptographic seeding</strong>, <strong>risk-weighted institute scoring</strong> (high complaints = higher probability), and <strong>dynamic distance geofencing</strong> to assign surprise inspection targets only minutes before departure.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          <!-- Dispatch Form Configuration -->
+          <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4 text-xs">
+            <h3 class="font-bold text-sm text-slate-800">Dispatch Parameters</h3>
+            
+            <div>
+              <label class="font-semibold text-slate-700 block mb-1">Target Scheme Division</label>
+              <select id="ai-scheme-type" class="w-full p-2.5 rounded-lg border border-slate-300 bg-white font-medium">
+                <option value="Residential Schools">Model Residential Schools (SC/ST)</option>
+                <option value="De-addiction Centres">NAPDDR De-addiction & Rehabilitation</option>
+                <option value="Skill Institutes">PM-DAKSH Skill Development Centers</option>
+                <option value="Hostel Schemes">Post-Matric Hostel Blocks</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="font-semibold text-slate-700 block mb-1">Inspection Priority Model</label>
+              <select id="ai-priority-model" class="w-full p-2.5 rounded-lg border border-slate-300 bg-white font-medium">
+                <option value="Risk-Weighted">Risk-Weighted (Complaint History + Days Overdue)</option>
+                <option value="Pure-Random">Pure Cryptographic Random</option>
+                <option value="Geographic-Cluster">Geographic Optimization (Nearest Available PMU)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="font-semibold text-slate-700 block mb-1">Leakage Prevention Window</label>
+              <div class="p-2.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-900 font-semibold">
+                🔒 Notification withheld until 60 mins before inspection
+              </div>
+            </div>
+
+            <button onclick="runAIAssignmentSimulator()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-xl shadow-md transition text-xs flex items-center justify-center space-x-2">
+              <i class="fa-solid fa-play"></i>
+              <span>Execute AI Assignment Engine</span>
+            </button>
+          </div>
+
+          <!-- Algorithm Execution Visualizer -->
+          <div class="md:col-span-2 bg-slate-900 text-slate-100 p-5 rounded-xl font-mono-code text-xs space-y-3 flex flex-col justify-between">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2 text-[11px] text-slate-400">
+              <span>ALGORITHM AUDIT CONSOLE // SMART_INSPECT_v2.4</span>
+              <span class="text-emerald-400"><i class="fa-solid fa-circle text-[8px] mr-1"></i> READY</span>
+            </div>
+
+            <div class="space-y-2 flex-1 overflow-y-auto max-h-60 custom-scrollbar text-[11px]" id="ai-console-log">
+              <div class="text-slate-500">// System initialized. Awaiting dispatch execution...</div>
+              <div class="text-slate-400">> Verified 128 registered institutes in master registry.</div>
+              <div class="text-slate-400">> 34 PMU officers geo-available within active clusters.</div>
+            </div>
+
+            <!-- Dynamic Result Card -->
+            <div id="ai-result-box" class="hidden bg-slate-800/90 border border-purple-500/50 p-4 rounded-xl space-y-2 text-xs">
+              <div class="flex items-center justify-between text-purple-300 font-bold">
+                <span class="flex items-center"><i class="fa-solid fa-check-circle mr-1.5 text-emerald-400"></i> ASSIGNMENT RESOLVED</span>
+                <span class="font-mono-code text-[10px] bg-purple-900/60 px-2 py-0.5 rounded text-purple-200" id="ai-hash">SHA256: 9e8a...31b</span>
+              </div>
+              <div class="grid grid-cols-2 gap-2 text-slate-300 pt-1 text-[11px]">
+                <div>Selected Target: <span class="font-bold text-white block" id="ai-res-target">Govt. Model Residential School</span></div>
+                <div>Assigned Inspector: <span class="font-bold text-white block" id="ai-res-inspector">Insp. R. K. Verma (PMU-4)</span></div>
+                <div>Risk Index: <span class="font-bold text-amber-400" id="ai-res-risk">8.7 / 10 (High Priority)</span></div>
+                <div>SMS / App Alert: <span class="font-bold text-emerald-400">Dispatched via Encrypted Push</span></div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- SECTION 5: LIVE CCTV & VIDEO CONFERENCE VERIFICATION                      -->
+    <!-- ========================================================================= -->
+    <section id="view-cctv-feed" class="hidden space-y-6">
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900 flex items-center">
+              <i class="fa-solid fa-video text-blue-600 mr-2"></i>
+              Real-Time CCTV Feeds & Video Conferencing Bridge
+            </h2>
+            <p class="text-xs text-slate-500">Live surveillance integrated across government-funded institutions with simulated AI person counters.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="startVideoCallModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs px-3.5 py-2 rounded-xl transition flex items-center shadow-sm">
+              <i class="fa-solid fa-headset mr-1.5"></i> Call Project Incharge (VC)
+            </button>
+            <button onclick="reloadCCTVFeeds()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs px-3 py-2 rounded-xl font-semibold transition">
+              <i class="fa-solid fa-rotate-right mr-1"></i> Refresh All
+            </button>
+          </div>
+        </div>
+
+        <!-- 4-Grid CCTV Streams -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          
+          <!-- Camera 1 -->
+          <div class="bg-slate-900 rounded-2xl overflow-hidden border border-slate-700 shadow-md">
+            <div class="bg-slate-800/90 text-white px-3 py-2 text-xs flex items-center justify-between border-b border-slate-700">
+              <div class="flex items-center space-x-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span class="font-bold">CAM-01 • Main Entrance Gate</span>
+              </div>
+              <span class="text-[10px] text-slate-400 font-mono-code">FPS: 28 • 1080p</span>
+            </div>
+            <div class="relative aspect-video bg-black flex items-center justify-center overflow-hidden">
+              <img src="https://images.unsplash.com/photo-1577495508048-b635879837f1?auto=format&fit=crop&w=800&q=80" alt="Camera 1" class="w-full h-full object-cover opacity-80 hover:scale-105 transition duration-500">
+              <div class="absolute top-2 left-2 bg-slate-900/80 backdrop-blur px-2 py-0.5 rounded text-[10px] text-emerald-400 font-mono-code font-bold">
+                AI Person Detection: 4 Ingress / 2 Egress
+              </div>
+              <div class="absolute bottom-2 right-2 bg-slate-900/80 px-2 py-0.5 rounded text-[10px] text-slate-300 font-mono-code">
+                Ranchi Skill Development Centre
+              </div>
+            </div>
+            <div class="p-2.5 bg-slate-800 flex items-center justify-between text-xs text-slate-300">
+              <span class="text-[11px]">Stream: RTSP://192.168.1.101/live</span>
+              <div class="space-x-1">
+                <button onclick="alert('Snapshot saved to dossier')" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-[10px] text-white">Capture Snap</button>
+                <button onclick="alert('Switching to full screen')" class="px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-[10px] text-white">Fullscreen</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Camera 2 -->
+          <div class="bg-slate-900 rounded-2xl overflow-hidden border border-slate-700 shadow-md">
+            <div class="bg-slate-800/90 text-white px-3 py-2 text-xs flex items-center justify-between border-b border-slate-700">
+              <div class="flex items-center space-x-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span class="font-bold">CAM-02 • Vocational Training Lab</span>
+              </div>
+              <span class="text-[10px] text-slate-400 font-mono-code">FPS: 30 • 1080p</span>
+            </div>
+            <div class="relative aspect-video bg-black flex items-center justify-center overflow-hidden">
+              <img src="https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80" alt="Camera 2" class="w-full h-full object-cover opacity-80 hover:scale-105 transition duration-500">
+              <div class="absolute top-2 left-2 bg-slate-900/80 backdrop-blur px-2 py-0.5 rounded text-[10px] text-amber-400 font-mono-code font-bold">
+                Active Count: 24 Students Present
+              </div>
+              <div class="absolute bottom-2 right-2 bg-slate-900/80 px-2 py-0.5 rounded text-[10px] text-slate-300 font-mono-code">
+                PM-DAKSH Center, Block 3
+              </div>
+            </div>
+            <div class="p-2.5 bg-slate-800 flex items-center justify-between text-xs text-slate-300">
+              <span class="text-[11px]">Stream: RTSP://192.168.1.102/live</span>
+              <div class="space-x-1">
+                <button onclick="alert('Snapshot saved to dossier')" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-[10px] text-white">Capture Snap</button>
+                <button onclick="alert('Switching to full screen')" class="px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-[10px] text-white">Fullscreen</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Camera 3 -->
+          <div class="bg-slate-900 rounded-2xl overflow-hidden border border-slate-700 shadow-md">
+            <div class="bg-slate-800/90 text-white px-3 py-2 text-xs flex items-center justify-between border-b border-slate-700">
+              <div class="flex items-center space-x-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span class="font-bold">CAM-03 • Hostel Dining & Kitchen</span>
+              </div>
+              <span class="text-[10px] text-slate-400 font-mono-code">FPS: 24 • 720p</span>
+            </div>
+            <div class="relative aspect-video bg-black flex items-center justify-center overflow-hidden">
+              <img src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80" alt="Camera 3" class="w-full h-full object-cover opacity-80 hover:scale-105 transition duration-500">
+              <div class="absolute top-2 left-2 bg-slate-900/80 backdrop-blur px-2 py-0.5 rounded text-[10px] text-emerald-400 font-mono-code font-bold">
+                Food Quality & Hygiene: Monitored
+              </div>
+              <div class="absolute bottom-2 right-2 bg-slate-900/80 px-2 py-0.5 rounded text-[10px] text-slate-300 font-mono-code">
+                SC/ST Girls Hostel Block A
+              </div>
+            </div>
+            <div class="p-2.5 bg-slate-800 flex items-center justify-between text-xs text-slate-300">
+              <span class="text-[11px]">Stream: RTSP://192.168.1.103/live</span>
+              <div class="space-x-1">
+                <button onclick="alert('Snapshot saved to dossier')" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-[10px] text-white">Capture Snap</button>
+                <button onclick="alert('Switching to full screen')" class="px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-[10px] text-white">Fullscreen</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Camera 4 -->
+          <div class="bg-slate-900 rounded-2xl overflow-hidden border border-slate-700 shadow-md">
+            <div class="bg-slate-800/90 text-white px-3 py-2 text-xs flex items-center justify-between border-b border-slate-700">
+              <div class="flex items-center space-x-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span class="font-bold">CAM-04 • Campus Ground & Sports</span>
+              </div>
+              <span class="text-[10px] text-slate-400 font-mono-code">FPS: 30 • 1080p</span>
+            </div>
+            <div class="relative aspect-video bg-black flex items-center justify-center overflow-hidden">
+              <img src="https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=800&q=80" alt="Camera 4" class="w-full h-full object-cover opacity-80 hover:scale-105 transition duration-500">
+              <div class="absolute top-2 left-2 bg-slate-900/80 backdrop-blur px-2 py-0.5 rounded text-[10px] text-emerald-400 font-mono-code font-bold">
+                Perimeter Security: Verified
+              </div>
+              <div class="absolute bottom-2 right-2 bg-slate-900/80 px-2 py-0.5 rounded text-[10px] text-slate-300 font-mono-code">
+                Govt. Residential Complex
+              </div>
+            </div>
+            <div class="p-2.5 bg-slate-800 flex items-center justify-between text-xs text-slate-300">
+              <span class="text-[11px]">Stream: RTSP://192.168.1.104/live</span>
+              <div class="space-x-1">
+                <button onclick="alert('Snapshot saved to dossier')" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-[10px] text-white">Capture Snap</button>
+                <button onclick="alert('Switching to full screen')" class="px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-[10px] text-white">Fullscreen</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- SECTION 6: AUDIT REPORTS & OFFICIAL DOSSIER GENERATOR                     -->
+    <!-- ========================================================================= -->
+    <section id="view-reports" class="hidden space-y-6">
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">Official Ministry Form</span>
+              <span class="text-xs text-slate-400">• Legally Admissible Digital Evidence</span>
+            </div>
+            <h2 class="text-2xl font-bold text-slate-900 mt-1">Inspection Audit Dossier & Compliance Certificate</h2>
+          </div>
+          <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-4 py-2.5 rounded-xl transition shadow flex items-center">
+            <i class="fa-solid fa-print mr-2"></i> Print / Save as PDF
+          </button>
+        </div>
+
+        <!-- Official MoSJE Styled Certificate Card -->
+        <div class="border-2 border-slate-800 rounded-2xl p-6 sm:p-8 bg-slate-50/50 space-y-6 max-w-4xl mx-auto shadow-sm">
+          
+          <!-- Gov Header -->
+          <div class="text-center border-b border-slate-300 pb-5 space-y-1">
+            <div class="w-12 h-12 mx-auto rounded-full bg-slate-900 text-white flex items-center justify-center text-lg font-bold">
+              <i class="fa-solid fa-building-columns"></i>
+            </div>
+            <h3 class="font-extrabold text-base text-slate-900 uppercase tracking-wide">Government of India • Ministry of Social Justice & Empowerment</h3>
+            <p class="text-xs text-slate-600">Department of Social Justice & Empowerment (DoSJE) • Smart India Hackathon 2026</p>
+            <p class="text-[11px] font-mono-code font-bold text-blue-700">FIELD AUDIT VERIFICATION CERTIFICATE // SIH26095</p>
+          </div>
+
+          <!-- Dossier Details Grid -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+            <div>
+              <span class="text-slate-500 font-semibold block">Dossier Reference ID</span>
+              <span class="font-mono-code font-bold text-slate-900 text-sm" id="rep-dossier-id">INS-20481</span>
+            </div>
+            <div>
+              <span class="text-slate-500 font-semibold block">Inspection Mode</span>
+              <span class="font-bold text-slate-900 text-sm" id="rep-mode">AI Surprise Check</span>
+            </div>
+            <div>
+              <span class="text-slate-500 font-semibold block">Date & UTC Timestamp</span>
+              <span class="font-mono-code font-bold text-slate-900 text-sm" id="rep-timestamp">2026-09-24 12:45:10</span>
+            </div>
+            <div>
+              <span class="text-slate-500 font-semibold block">Overall Compliance</span>
+              <span class="font-bold text-emerald-600 text-sm" id="rep-compliance">100% SATISFACTORY</span>
+            </div>
+          </div>
+
+          <!-- Institute & Inspector Meta -->
+          <div class="p-4 bg-white rounded-xl border border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+            <div>
+              <h4 class="font-bold text-slate-900 mb-1">Target Institution Information</h4>
+              <p class="text-slate-700"><strong>Name:</strong> <span id="rep-inst-name">Skill Development Centre</span></p>
+              <p class="text-slate-700"><strong>Location:</strong> Ranchi, Jharkhand (Pin: 834001)</p>
+              <p class="text-slate-700"><strong>Verified GPS:</strong> <span class="font-mono-code font-bold text-blue-700" id="rep-gps">Lat 23.344100, Long 85.309600</span></p>
+            </div>
+            <div>
+              <h4 class="font-bold text-slate-900 mb-1">Auditing Authority Information</h4>
+              <p class="text-slate-700"><strong>Auditor:</strong> <span id="rep-inspector-name">Insp. R. K. Verma (Badge: PMU-4)</span></p>
+              <p class="text-slate-700"><strong>Department:</strong> Project Monitoring Unit, MoSJE</p>
+              <p class="text-slate-700"><strong>Hardware Token:</strong> Knox-Protected Device #7781</p>
+            </div>
+          </div>
+
+          <!-- Digital Evidence Preview -->
+          <div class="space-y-2 text-xs">
+            <h4 class="font-bold text-slate-900">Cryptographically Sealed Evidence Artifacts</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div class="bg-white p-3 rounded-xl border border-slate-200 space-y-1">
+                <span class="font-semibold text-slate-600 block text-[11px]">Geo-Watermarked Photographic Proof</span>
+                <div class="aspect-video bg-slate-900 rounded-lg overflow-hidden relative">
+                  <img id="rep-photo-preview" src="https://images.unsplash.com/photo-1577495508048-b635879837f1?auto=format&fit=crop&w=600&q=80" alt="Inspection Proof" class="w-full h-full object-cover">
+                  <div class="absolute bottom-1 left-1 bg-black/80 text-[9px] text-white px-1.5 py-0.5 rounded font-mono-code">
+                    LAT: 23.344100 | LNG: 85.309600 | 2026-09-24
+                  </div>
+                </div>
+              </div>
+              <div class="bg-white p-3 rounded-xl border border-slate-200 space-y-1 flex flex-col justify-between">
+                <div>
+                  <span class="font-semibold text-slate-600 block text-[11px]">Center Incharge E-Signature</span>
+                  <div class="h-24 bg-slate-100 border border-dashed border-slate-300 rounded-lg flex items-center justify-center">
+                    <span class="font-signature text-xl text-slate-700 italic">Dr. B.Amerandra (Superintendent)</span>
+                  </div>
+                </div>
+                <div class="text-[10px] text-slate-500 pt-2 border-t border-slate-100">
+                  SHA256 Digital Checksum: <span class="font-mono-code text-slate-700 font-bold">f83e29a...0192e</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Findings & Signoff -->
+          <div class="bg-white p-4 rounded-xl border border-slate-200 text-xs space-y-2">
+            <h4 class="font-bold text-slate-900">Official Findings & Corrective Directions</h4>
+            <p class="text-slate-700 italic" id="rep-findings-text">
+              "The physical facility was inspected under surprise assignment protocols. Beneficiary headcount was verified at 48 present, matching biometric database within 95% threshold. Fire safety equipment and nutritional hygiene were found in compliance with DoSJE guidelines."
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- VIDEO CALL MODAL SIMULATION -->
+  <div id="vc-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl text-white">
+      <div class="p-4 bg-slate-800 flex items-center justify-between border-b border-slate-700">
+        <div class="flex items-center space-x-2">
+          <span class="w-3 h-3 rounded-full bg-red-500 animate-ping"></span>
+          <span class="font-bold text-sm">Secure Gov-WebRTC Conference</span>
+        </div>
+        <button onclick="closeVideoCallModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <div class="relative aspect-video bg-black flex items-center justify-center">
+        <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=700&q=80" alt="Incharge Video" class="w-full h-full object-cover">
+        <div class="absolute bottom-3 left-3 bg-slate-900/80 px-2.5 py-1 rounded-lg text-xs font-semibold">
+          Dr. A. Sen • Superintendent (Skill Centre)
+        </div>
+        <div class="absolute top-3 right-3 bg-emerald-500 text-slate-900 px-2 py-0.5 rounded text-[10px] font-bold">
+          E2E ENCRYPTED
+        </div>
+      </div>
+
+      <div class="p-4 flex items-center justify-center space-x-4 bg-slate-800/80">
+        <button class="w-10 h-10 rounded-full bg-slate-700 hover:bg-slate-600 flex items-center justify-center text-sm"><i class="fa-solid fa-microphone"></i></button>
+        <button class="w-10 h-10 rounded-full bg-slate-700 hover:bg-slate-600 flex items-center justify-center text-sm"><i class="fa-solid fa-video"></i></button>
+        <button onclick="closeVideoCallModal()" class="w-12 h-10 rounded-full bg-red-600 hover:bg-red-700 flex items-center justify-center text-sm font-bold text-white"><i class="fa-solid fa-phone-slash"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="fixed bottom-6 right-6 bg-slate-900 text-white border border-slate-700 px-4 py-3 rounded-2xl shadow-2xl text-xs font-semibold flex items-center space-x-3 transition duration-300 transform translate-y-24 opacity-0 pointer-events-none z-50">
+    <span class="text-emerald-400 text-base" id="toast-icon"><i class="fa-solid fa-circle-check"></i></span>
+    <span id="toast-msg">Action completed successfully</span>
+  </div>
+
+  <!-- APPLICATION SCRIPTS -->
+  <script>
+    // ==========================================
+    // 1. DATA STORAGE & INITIAL DOCK DATA
+    // ==========================================
+    const DEFAULT_INSPECTIONS = [
+      {
+        id: "INS-20481",
+        project: "Ranchi Skill Development Centre",
+        inspector: "Insp. R. K. Verma",
+        type: "Surprise",
+        lat: "23.344100",
+        lng: "85.309600",
+        status: "Completed",
+        timestamp: "2026-09-24 11:20:00",
+        evidence: "Photo + GPS + Sig",
+        remarks: "Classroom attendance verified; bio-waste handling approved."
+      },
+      {
+        id: "INS-20482",
+        project: "SC/ST Hostel Scheme - Block A",
+        inspector: "Insp. Sunita Devi",
+        type: "Routine",
+        lat: "23.351200",
+        lng: "85.321400",
+        status: "In Progress",
+        timestamp: "2026-09-24 10:15:00",
+        evidence: "GPS Live Locked",
+        remarks: "Kitchen food sample taken for hygiene testing."
+      },
+      {
+        id: "INS-20483",
+        project: "NGO - Rural Education Initiative",
+        inspector: "Insp. Manoj Kumar",
+        type: "Surprise",
+        lat: "23.362900",
+        lng: "85.337100",
+        status: "Completed",
+        timestamp: "2026-09-24 09:40:00",
+        evidence: "Photo + Video + GPS",
+        remarks: "All 55 students present; computer lab functional."
+      },
+      {
+        id: "INS-20484",
+        project: "NAPDDR De-addiction Rehabilitation",
+        inspector: "Insp. Alok Tiwari",
+        type: "Emergency",
+        lat: "23.328800",
+        lng: "85.301200",
+        status: "Anomaly Flagged",
+        timestamp: "2026-09-23 16:50:00",
+        evidence: "CCTV Headcount Mismatch",
+        remarks: "Doctor attendance absent; flagged for disciplinary review."
+      }
+    ];
+
+    let inspectionsData = JSON.parse(localStorage.getItem('i360_inspections')) || DEFAULT_INSPECTIONS;
+    let leafletMap = null;
+    let mapMarkers = [];
+
+    // ==========================================
+    // 2. TAB SWITCHING LOGIC
+    // ==========================================
+    function switchTab(tabId) {
+      const views = ['dashboard', 'mobile-app', 'gis-map', 'ai-assign', 'cctv-feed', 'reports'];
+      
+      views.forEach(v => {
+        const el = document.getElementById(`view-${v}`);
+        const navBtn = document.getElementById(`nav-${v}`);
+        if (el) {
+          if (v === tabId) {
+            el.classList.remove('hidden');
+          } else {
+            el.classList.add('hidden');
+          }
+        }
+        if (navBtn) {
+          if (v === tabId) {
+            navBtn.className = "tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-2 transition bg-blue-600 text-white shadow-sm";
+          } else {
+            navBtn.className = "tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-2 transition text-slate-300 hover:text-white hover:bg-slate-700/50";
+          }
+        }
+      });
+
+      // Special init for Leaflet Map when map tab is activated
+      if (tabId === 'gis-map') {
+        setTimeout(initLeafletMap, 150);
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // ==========================================
+    // 3. TABLE POPULATION & FILTERING
+    // ==========================================
+    function renderInspectionTable() {
+      const tbody = document.getElementById('inspections-table-body');
+      if (!tbody) return;
+
+      tbody.innerHTML = '';
+      inspectionsData.forEach(item => {
+        let statusBadge = '';
+        if (item.status === 'Completed') {
+          statusBadge = '<span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full font-semibold">Completed</span>';
+        } else if (item.status === 'In Progress') {
+          statusBadge = '<span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full font-semibold">In Progress</span>';
+        } else {
+          statusBadge = '<span class="px-2 py-0.5 bg-red-100 text-red-800 rounded-full font-semibold">Anomaly Flagged</span>';
+        }
+
+        let typeBadge = '';
+        if (item.type === 'Surprise') {
+          typeBadge = '<span class="px-2 py-0.5 bg-purple-100 text-purple-800 rounded-md font-semibold">AI Surprise</span>';
+        } else if (item.type === 'Emergency') {
+          typeBadge = '<span class="px-2 py-0.5 bg-red-100 text-red-800 rounded-md font-semibold">Emergency</span>';
+        } else {
+          typeBadge = '<span class="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-md font-semibold">Routine</span>';
+        }
+
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50 transition border-b border-slate-100";
+        tr.innerHTML = `
+          <td class="p-3.5">
+            <span class="font-mono-code font-bold text-slate-900">${item.id}</span>
+            <div class="text-[10px] text-slate-400">${item.timestamp}</div>
+          </td>
+          <td class="p-3.5 font-semibold text-slate-900">${item.project}</td>
+          <td class="p-3.5 text-slate-700">${item.inspector}</td>
+          <td class="p-3.5">${typeBadge}</td>
+          <td class="p-3.5 font-mono-code text-[11px] text-slate-600">
+            <i class="fa-solid fa-location-dot text-emerald-600 mr-1"></i>${item.lat}, ${item.lng}
+          </td>
+          <td class="p-3.5 text-slate-700">
+            <span class="inline-flex items-center text-[11px]"><i class="fa-solid fa-file-shield text-blue-600 mr-1"></i> ${item.evidence}</span>
+          </td>
+          <td class="p-3.5">${statusBadge}</td>
+          <td class="p-3.5 text-right">
+            <button onclick="viewInspectionReport('${item.id}')" class="text-blue-600 hover:text-blue-800 font-semibold text-[11px] bg-blue-50 px-2 py-1 rounded">View Dossier</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // Update KPI counter
+      const kpiTotal = document.getElementById('kpi-total-projects');
+      const kpiComp = document.getElementById('kpi-completed-inspections');
+      if (kpiTotal) kpiTotal.innerText = 120 + inspectionsData.length;
+      if (kpiComp) kpiComp.innerText = inspectionsData.filter(x => x.status === 'Completed').length + 90;
+    }
+
+    function filterInspectionTable() {
+      const search = document.getElementById('table-search').value.toLowerCase();
+      const typeFilter = document.getElementById('table-filter-type').value;
+      const rows = document.querySelectorAll('#inspections-table-body tr');
+
+      rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        const matchesSearch = text.includes(search);
+        let matchesType = true;
+        if (typeFilter !== 'ALL') {
+          matchesType = text.includes(typeFilter.toLowerCase());
+        }
+        row.style.display = matchesSearch && matchesType ? '' : 'none';
+      });
+    }
+
+    // ==========================================
+    // 4. LEAFLET INTERACTIVE MAP IMPLEMENTATION
+    // ==========================================
+    function initLeafletMap() {
+      if (leafletMap) {
+        leafletMap.invalidateSize();
+        return;
+      }
+
+      // Center around Ranchi / Jharkhand coordinates
+      leafletMap = L.map('gis-leaflet-map').setView([23.3441, 85.3096], 13);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(leafletMap);
+
+      // Add pins for current inspections
+      inspectionsData.forEach(item => {
+        const lat = parseFloat(item.lat);
+        const lng = parseFloat(item.lng);
+        if (isNaN(lat) || isNaN(lng)) return;
+
+        let pinColor = item.status === 'Completed' ? '#10b981' : (item.status === 'In Progress' ? '#f59e0b' : '#ef4444');
+
+        const circleMarker = L.circleMarker([lat, lng], {
+          radius: 9,
+          fillColor: pinColor,
+          color: '#ffffff',
+          weight: 2,
+          opacity: 1,
+          fillOpacity: 0.9
+        }).addTo(leafletMap);
+
+        circleMarker.bindPopup(`
+          <div style="font-family:sans-serif;font-size:12px;padding:2px;">
+            <strong style="color:#0f172a;font-size:13px;">${item.project}</strong><br>
+            <span style="color:#475569;">ID: ${item.id} (${item.type})</span><br>
+            <span style="color:#059669;font-weight:bold;">Status: ${item.status}</span><br>
+            <span style="font-size:10px;color:#64748b;">GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)}</span><br>
+            <button onclick="viewInspectionReport('${item.id}')" style="margin-top:5px;background:#2563eb;color:#fff;border:none;padding:3px 8px;border-radius:4px;cursor:pointer;font-size:11px;">Open Audit File</button>
+          </div>
+        `);
+      });
+    }
+
+    // ==========================================
+    // 5. CHART.JS PERFORMANCE GRAPH
+    // ==========================================
+    function initCharts() {
+      const ctx = document.getElementById('inspectionsChart');
+      if (!ctx) return;
+
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Today'],
+          datasets: [
+            {
+              label: 'AI Surprise Inspections',
+              data: [12, 19, 15, 22, 18, 25, 29],
+              backgroundColor: '#3b82f6',
+              borderRadius: 6
+            },
+            {
+              label: 'Routine Inspections',
+              data: [8, 11, 9, 14, 12, 16, 17],
+              backgroundColor: '#cbd5e1',
+              borderRadius: 6
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
+          },
+          scales: {
+            x: { grid: { display: false } },
+            y: { grid: { color: '#f1f5f9' }, ticks: { stepSize: 5 } }
+          }
+        }
+      });
+    }
+
+    // ==========================================
+    // 6. MOBILE PWA & WATERMARK ENGINE
+    // ==========================================
+    let capturedPhotoData = null;
+
+    function captureMobileGPS() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          pos => {
+            const lat = pos.coords.latitude.toFixed(6);
+            const lng = pos.coords.longitude.toFixed(6);
+            document.getElementById('m-lat').innerText = lat;
+            document.getElementById('m-lng').innerText = lng;
+            showToast("GPS Locked via Browser Geolocation API");
+            if (capturedPhotoData) drawWatermarkedCanvas(capturedPhotoData);
+          },
+          () => {
+            // Default simulated GPS fallback
+            showToast("Simulated GPS locked within target geofence");
+          }
+        );
+      } else {
+        showToast("GPS simulation locked");
+      }
+    }
+
+    function snapSamplePhoto(type) {
+      const canvas = document.getElementById('photo-watermark-canvas');
+      const placeholder = document.getElementById('photo-placeholder');
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+
+      if (type === 'classroom') {
+        img.src = "https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=600&q=80";
+      } else {
+        img.src = "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80";
+      }
+
+      img.onload = () => {
+        capturedPhotoData = img;
+        drawWatermarkedCanvas(img);
+        placeholder.classList.add('hidden');
+        showToast("Photo captured with tamper-proof GPS watermark!");
+      };
+    }
+
+    function drawWatermarkedCanvas(img) {
+      const canvas = document.getElementById('photo-watermark-canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = 400;
+      canvas.height = 240;
+
+      // Draw original image
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      // Overlay watermark banner
+      ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
+      ctx.fillRect(0, canvas.height - 45, canvas.width, 45);
+
+      const lat = document.getElementById('m-lat').innerText;
+      const lng = document.getElementById('m-lng').innerText;
+      const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
+
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "bold 11px monospace";
+      ctx.fillText(`GEO-TAG: ${lat} N, ${lng} E`, 10, canvas.height - 28);
+      ctx.fillStyle = "#38bdf8";
+      ctx.font = "10px monospace";
+      ctx.fillText(`UTC: ${now} | ID: INS-PWA | MoSJE-SECURE`, 10, canvas.height - 12);
+    }
+
+    function prefillSampleInspection() {
+      document.getElementById('mobile-scheme-name').innerText = "Model Residential School (Block-B)";
+      document.getElementById('m-remarks').value = "Conducted surprise check at 09:30 AM. 42 out of 45 students verified via biometric log. Water purification plant working properly.";
+      snapSamplePhoto('classroom');
+      showToast("Demo inspection details prefilled!");
+    }
+
+    function submitMobileInspection() {
+      const remarks = document.getElementById('m-remarks').value;
+      if (!remarks) {
+        alert("Please write your inspection observations before submitting.");
+        return;
+      }
+
+      const id = "INS-" + Math.floor(20500 + Math.random() * 900);
+      const newEntry = {
+        id: id,
+        project: document.getElementById('mobile-scheme-name').innerText,
+        inspector: "Insp. R. K. Verma",
+        type: "Surprise",
+        lat: document.getElementById('m-lat').innerText,
+        lng: document.getElementById('m-lng').innerText,
+        status: "Completed",
+        timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+        evidence: "Photo + GPS + Watermark",
+        remarks: remarks
+      };
+
+      inspectionsData.unshift(newEntry);
+      localStorage.setItem('i360_inspections', JSON.stringify(inspectionsData));
+
+      renderInspectionTable();
+      if (leafletMap) initLeafletMap();
+
+      const statusEl = document.getElementById('m-sync-status');
+      statusEl.classList.remove('hidden');
+
+      showToast(`Inspection ${id} synced with Central Portal!`);
+
+      // Switch to reports tab after short moment
+      setTimeout(() => {
+        viewInspectionReport(id);
+      }, 1200);
+    }
+
+    // Canvas Signature Handling
+    function initSignaturePad() {
+      const canvas = document.getElementById('signature-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      let drawing = false;
+
+      function getPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        return {
+          x: (e.clientX || e.touches[0].clientX) - rect.left,
+          y: (e.clientY || e.touches[0].clientY) - rect.top
+        };
+      }
+
+      canvas.addEventListener('mousedown', e => {
+        drawing = true;
+        const pos = getPos(e);
+        ctx.beginPath();
+        ctx.moveTo(pos.x, pos.y);
+      });
+      canvas.addEventListener('mousemove', e => {
+        if (!drawing) return;
+        const pos = getPos(e);
+        ctx.lineTo(pos.x, pos.y);
+        ctx.strokeStyle = "#0f172a";
+        ctx.lineWidth = 2;
+        ctx.lineCap = "round";
+        ctx.stroke();
+      });
+      window.addEventListener('mouseup', () => drawing = false);
+
+      // Touch events for mobile
+      canvas.addEventListener('touchstart', e => {
+        drawing = true;
+        const pos = getPos(e);
+        ctx.beginPath();
+        ctx.moveTo(pos.x, pos.y);
+        e.preventDefault();
+      });
+      canvas.addEventListener('touchmove', e => {
+        if (!drawing) return;
+        const pos = getPos(e);
+        ctx.lineTo(pos.x, pos.y);
+        ctx.strokeStyle = "#0f172a";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        e.preventDefault();
+      });
+      canvas.addEventListener('touchend', () => drawing = false);
+    }
+
+    function clearSignaturePad() {
+      const canvas = document.getElementById('signature-canvas');
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    // ==========================================
+    // 7. AI ASSIGNMENT ALGORITHM SIMULATOR
+    // ==========================================
+    function runAIAssignmentSimulator() {
+      const consoleLog = document.getElementById('ai-console-log');
+      const resultBox = document.getElementById('ai-result-box');
+      const scheme = document.getElementById('ai-scheme-type').value;
+      const model = document.getElementById('ai-priority-model').value;
+
+      resultBox.classList.add('hidden');
+      consoleLog.innerHTML = `<div class="text-purple-400">> Initializing cryptographic dispatch algorithm (${model})...</div>`;
+
+      setTimeout(() => {
+        consoleLog.innerHTML += `<div>> Fetching compliance records for ${scheme}...</div>`;
+      }, 300);
+
+      setTimeout(() => {
+        consoleLog.innerHTML += `<div class="text-amber-300">> Calculated Risk Index: Anomaly variance = +14.2% in cluster #3.</div>`;
+      }, 700);
+
+      setTimeout(() => {
+        consoleLog.innerHTML += `<div class="text-emerald-400">> Optimal zero-leakage officer selected: Insp. R. K. Verma.</div>`;
+        consoleLog.innerHTML += `<div class="text-slate-400">> Geofence token generated: token_sha_29841.</div>`;
+        
+        resultBox.classList.remove('hidden');
+        document.getElementById('ai-res-target').innerText = scheme + " (Unit 12)";
+        document.getElementById('ai-hash').innerText = "SHA256: " + Math.random().toString(36).substring(2, 10);
+        showToast("AI surprise task assigned & push alert sent!");
+      }, 1200);
+    }
+
+    // ==========================================
+    // 8. REPORT / DOSSIER VIEWER
+    // ==========================================
+    function viewInspectionReport(id) {
+      const item = inspectionsData.find(x => x.id === id) || inspectionsData[0];
+      
+      document.getElementById('rep-dossier-id').innerText = item.id;
+      document.getElementById('rep-mode').innerText = item.type + " Verification";
+      document.getElementById('rep-timestamp').innerText = item.timestamp;
+      document.getElementById('rep-inst-name').innerText = item.project;
+      document.getElementById('rep-inspector-name').innerText = item.inspector;
+      document.getElementById('rep-gps').innerText = `Lat: ${item.lat}, Long: ${item.lng}`;
+      document.getElementById('rep-findings-text').innerText = `"${item.remarks}"`;
+
+      switchTab('reports');
+    }
+
+    // ==========================================
+    // 9. MODALS & EXTRAS
+    // ==========================================
+    function startVideoCallModal() {
+      document.getElementById('vc-modal').classList.remove('hidden');
+    }
+    function closeVideoCallModal() {
+      document.getElementById('vc-modal').classList.add('hidden');
+    }
+    function reloadCCTVFeeds() {
+      showToast("All CCTV streams reconnected successfully");
+    }
+
+    function triggerNewSimulatedInspection() {
+      switchTab('mobile-app');
+      prefillSampleInspection();
+    }
+
+    function exportDataToCSV() {
+      let csv = "ID,Project,Inspector,Type,Latitude,Longitude,Status,Timestamp\n";
+      inspectionsData.forEach(r => {
+        csv += `${r.id},"${r.project}","${r.inspector}",${r.type},${r.lat},${r.lng},${r.status},${r.timestamp}\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.setAttribute('href', url);
+      a.setAttribute('download', 'MoSJE_Inspect360_Audit_Data.csv');
+      a.click();
+      showToast("CSV data exported successfully");
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-msg').innerText = msg;
+      toast.classList.remove('translate-y-24', 'opacity-0', 'pointer-events-none');
+      setTimeout(() => {
+        toast.classList.add('translate-y-24', 'opacity-0', 'pointer-events-none');
+      }, 3500);
+    }
+
+    // Window Init
+    window.addEventListener('DOMContentLoaded', () => {
+      renderInspectionTable();
+      initCharts();
+      initSignaturePad();
+      
+      // Update phone clock
+      const now = new Date();
+      document.getElementById('phone-clock').innerText = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+    });
+  </script>
+
+</body>
+</html>

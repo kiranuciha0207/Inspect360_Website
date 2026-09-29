@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inspect360 | SIH26095 Real-Time Monitoring & Inspection Platform</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            gov: {
+              50: '#f0f5fa',
+              100: '#e1ecf5',
+              600: '#0284c7',
+              700: '#0369a1',
+              800: '#075985',
+              900: '#0c4a6e',
+              deep: '#0a192f'
+            },
+            saffron: '#ff9933',
+            indiaGreen: '#138808'
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Leaflet CSS & JS for OpenStreetMap / GIS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/custom.css">
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
+
+  <!-- TOP GOV STRIP & HEADER -->
+  <div class="bg-gradient-to-r from-orange-600 via-white to-green-700 h-1"></div>
+  <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        
+        <!-- Left: Brand Details -->
+        <div class="flex items-center space-x-3 cursor-pointer" onclick="App.switchTab('dashboard')">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center font-bold text-lg shadow-inner text-white">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="font-extrabold tracking-tight text-lg text-white">Inspect<span class="text-blue-400">360</span></span>
+              <span class="text-[10px] bg-blue-900 text-blue-200 px-2 py-0.5 rounded-full font-semibold border border-blue-700">SIH26095</span>
+            </div>
+            <p class="text-[11px] text-slate-400 hidden sm:block">Ministry of Social Justice & Empowerment • Team Smart Inspect (AMP2026018)</p>
+          </div>
+        </div>
+
+        <!-- Center: Primary Navigation Tabs -->
+        <nav class="hidden lg:flex items-center space-x-1 bg-slate-800/80 p-1 rounded-xl border border-slate-700/60">
+          <button onclick="App.switchTab('dashboard')" id="nav-dashboard" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-2 transition bg-blue-600 text-white shadow-sm">
+            <i class="fa-solid fa-chart-pie"></i>
+            <span>Ministry Dashboard</span>
+          </button>
+          <button onclick="App.switchTab('mobile-app')" id="nav-mobile-app" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-2 transition text-slate-300 hover:text-white hover:bg-slate-700/50">
+            <i class="fa-solid fa-mobile-screen-button"></i>
+            <span>Inspector Field PWA</span>
+          </button>
+          <button onclick="App.switchTab('gis-map')" id="nav-gis-map" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-2 transition text-slate-300 hover:text-white hover:bg-slate-700/50">
+            <i class="fa-solid fa-map-location-dot"></i>
+            <span>GIS Tracking</span>
+          </button>
+          <button onclick="App.switchTab('ai-assign')" id="nav-ai-assign" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-2 transition text-slate-300 hover:text-white hover:bg-slate-700/50">
+            <i class="fa-solid fa-dice"></i>
+            <span>AI Randomizer</span>
+          </button>
+          <button onclick="App.switchTab('cctv-feed')" id="nav-cctv-feed" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-2 transition text-slate-300 hover:text-white hover:bg-slate-700/50">
+            <i class="fa-solid fa-video"></i>
+            <span>Live CCTV & VC</span>
+          </button>
+          <button onclick="App.switchTab('citizen')" id="nav-citizen" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-2 transition text-slate-300 hover:text-white hover:bg-slate-700/50">
+            <i class="fa-solid fa-users"></i>
+            <span>Citizen Portal</span>
+          </button>
+          <button onclick="App.switchTab('reports')" id="nav-reports" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-2 transition text-slate-300 hover:text-white hover:bg-slate-700/50">
+            <i class="fa-solid fa-file-contract"></i>
+            <span>Audit Dossiers</span>
+          </button>
+        </nav>
+
+        <!-- Right: Status Badge & Role Switcher -->
+        <div class="flex items-center space-x-3">
+          <div class="hidden sm:flex items-center text-xs text-emerald-400 bg-emerald-950/60 px-2.5 py-1 rounded-full border border-emerald-800">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 mr-2 animate-ping"></span>
+            REST API Connected
+          </div>
+          <button onclick="App.switchTab('mobile-app')" class="lg:hidden text-white bg-blue-600 px-3 py-1.5 rounded-lg text-xs font-semibold">
+            <i class="fa-solid fa-mobile-screen mr-1"></i> Mobile
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Mobile Sub-Menu -->
+    <div class="lg:hidden flex overflow-x-auto space-x-2 px-4 py-2 border-t border-slate-800 custom-scrollbar text-xs bg-slate-900/95">
+      <button onclick="App.switchTab('dashboard')" class="px-2.5 py-1 bg-slate-800 rounded-lg whitespace-nowrap text-slate-200">Dashboard</button>
+      <button onclick="App.switchTab('mobile-app')" class="px-2.5 py-1 bg-slate-800 rounded-lg whitespace-nowrap text-slate-200">Mobile PWA</button>
+      <button onclick="App.switchTab('gis-map')" class="px-2.5 py-1 bg-slate-800 rounded-lg whitespace-nowrap text-slate-200">GIS Tracking</button>
+      <button onclick="App.switchTab('ai-assign')" class="px-2.5 py-1 bg-slate-800 rounded-lg whitespace-nowrap text-slate-200">AI Randomizer</button>
+      <button onclick="App.switchTab('cctv-feed')" class="px-2.5 py-1 bg-slate-800 rounded-lg whitespace-nowrap text-slate-200">Live CCTV</button>
+      <button onclick="App.switchTab('citizen')" class="px-2.5 py-1 bg-slate-800 rounded-lg whitespace-nowrap text-slate-200">Citizen Portal</button>
+      <button onclick="App.switchTab('reports')" class="px-2.5 py-1 bg-slate-800 rounded-lg whitespace-nowrap text-slate-200">Audit Dossiers</button>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+
+    <!-- ========================================================================= -->
+    <!-- SECTION 1: MINISTRY CENTRAL MONITORING DASHBOARD (DEFAULT VIEW)           -->
+    <!-- ========================================================================= -->
+    <section id="view-dashboard" class="space-y-6">
+      
+      <!-- Top Alert Notification Bar -->
+      <div class="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div class="absolute -right-8 -top-8 w-44 h-44 bg-blue-500/10 rounded-full blur-2xl pointer-events-none"></div>
+        <div>
+          <div class="flex items-center space-x-2 mb-1.5">
+            <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500 text-slate-900 uppercase tracking-wider">MoSJE Central Vigilance Portal</span>
+            <span class="text-xs text-blue-200">• Real-Time Monitoring & Fraud Deterrence Network</span>
+          </div>
+          <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight">Smart Real-Time Monitoring & Inspection Platform</h1>
+          <p class="text-xs sm:text-sm text-slate-300 max-w-2xl mt-1">
+            Centrally overseeing 128+ welfare schemes across residential hostels, special schools, and de-addiction centers with AI-driven surprise audits and SHA-256 cryptographic seals.
+          </p>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <button onclick="App.triggerAiRandomizer()" class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold text-xs px-4 py-2.5 rounded-xl shadow-lg transition flex items-center">
+            <i class="fa-solid fa-dice mr-2"></i> Trigger AI Surprise Audit
+          </button>
+          <button onclick="App.exportCSV()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white text-xs px-3.5 py-2.5 rounded-xl transition flex items-center">
+            <i class="fa-solid fa-download mr-1.5"></i> Export CSV
+          </button>
+        </div>
+      </div>
+
+      <!-- KPI METRIC CARDS -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow transition">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Active Schemes</span>
+            <span class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-sm font-bold"><i class="fa-solid fa-landmark"></i></span>
+          </div>
+          <div class="mt-3 flex items-baseline space-x-2">
+            <span class="text-3xl font-extrabold text-slate-900" id="kpi-total-projects">8</span>
+            <span class="text-xs font-semibold text-emerald-600"><i class="fa-solid fa-arrow-trend-up mr-0.5"></i> +12% MoM</span>
+          </div>
+          <div class="mt-2 text-xs text-slate-500">Residential Schools, Hostels & NGOs</div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow transition">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Completed Field Audits</span>
+            <span class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm font-bold"><i class="fa-solid fa-clipboard-check"></i></span>
+          </div>
+          <div class="mt-3 flex items-baseline space-x-2">
+            <span class="text-3xl font-extrabold text-slate-900" id="kpi-completed-inspections">94</span>
+            <span class="text-xs font-semibold text-emerald-600"><i class="fa-solid fa-shield-check mr-0.5"></i> 100% Geo-tagged</span>
+          </div>
+          <div class="mt-2 text-xs text-slate-500">With GPS & timestamp verification</div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow transition">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Surprise Audits Dispatched</span>
+            <span class="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-sm font-bold"><i class="fa-solid fa-dice"></i></span>
+          </div>
+          <div class="mt-3 flex items-baseline space-x-2">
+            <span class="text-3xl font-extrabold text-purple-700" id="kpi-surprise-count">28</span>
+            <span class="text-xs font-semibold text-purple-600">Zero Advance Warning</span>
+          </div>
+          <div class="mt-2 text-xs text-slate-500">Anti-collusion randomizer active</div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-red-200 shadow-sm hover:shadow transition bg-red-50/20">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-red-600 uppercase tracking-wider">AI Anomaly Alerts</span>
+            <span class="w-9 h-9 rounded-xl bg-red-100 text-red-600 flex items-center justify-center text-sm font-bold"><i class="fa-solid fa-triangle-exclamation"></i></span>
+          </div>
+          <div class="mt-3 flex items-baseline space-x-2">
+            <span class="text-3xl font-extrabold text-red-600" id="kpi-anomaly-count">3</span>
+            <span class="text-xs font-semibold text-red-600 bg-red-100 px-1.5 py-0.5 rounded">Action Required</span>
+          </div>
+          <div class="mt-2 text-xs text-slate-500">Geofence deviation, headcount mismatch</div>
+        </div>
+      </div>
+
+      <!-- CHARTS & REAL-TIME ALERTS ROW -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Inspection Distribution Chart -->
+        <div class="lg:col-span-2 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-base font-bold text-slate-900">Inspection & Audit Performance Trends</h2>
+              <p class="text-xs text-slate-500">Weekly inspection volume: Routine vs. AI Surprise Visits</p>
+            </div>
+            <span class="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg">Last 7 Days</span>
+          </div>
+          <div class="h-64">
+            <canvas id="inspectionsChart"></canvas>
+          </div>
+        </div>
+
+        <!-- AI Anomaly Detection Feed -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center space-x-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
+              <h2 class="text-base font-bold text-slate-900">AI Fraud & Anomaly Feed</h2>
+            </div>
+            <span class="text-[11px] font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded">Automated Rules</span>
+          </div>
+          <p class="text-xs text-slate-500 mb-4">Flagged based on 150m geofence mismatch, ghost beneficiaries, and CCTV headcounts.</p>
+
+          <div class="space-y-3 flex-1 overflow-y-auto pr-1 max-h-64 custom-scrollbar" id="anomaly-feed-container">
+            <!-- Dynamically populated from backend -->
+          </div>
+        </div>
+      </div>
+
+      <!-- RECENT INSPECTION DATA TABLE -->
+      <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 class="text-base font-bold text-slate-900">Recent Field Inspections & Evidence Dossiers</h2>
+            <p class="text-xs text-slate-500">Live submissions synchronized from mobile inspection units</p>
+          </div>
+          <div class="flex items-center space-x-2">
+            <input type="text" id="table-search" onkeyup="App.loadInspectionsTable()" placeholder="Search project, ID, inspector..." class="text-xs border border-slate-300 rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-600 w-48 sm:w-64">
+            <select id="table-filter-type" onchange="App.loadInspectionsTable()" class="text-xs border border-slate-300 rounded-lg px-2 py-1.5 focus:outline-none focus:border-blue-600">
+              <option value="ALL">All Types</option>
+              <option value="Surprise">Surprise</option>
+              <option value="Routine">Routine</option>
+              <option value="Emergency">Emergency</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs" id="inspections-table">
+            <thead class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+              <tr>
+                <th class="p-3.5">ID & Date</th>
+                <th class="p-3.5">Project / Scheme Name</th>
+                <th class="p-3.5">Inspector</th>
+                <th class="p-3.5">Type</th>
+                <th class="p-3.5">GPS Verification</th>
+                <th class="p-3.5">SHA-256 Seal</th>
+                <th class="p-3.5">Status</th>
+                <th class="p-3.5 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100" id="inspections-table-body">
+              <!-- Dynamically populated from backend -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- SECTION 2: INSPECTOR MOBILE APP VIEW (LIVE PWA / MOBILE SIMULATOR)        -->
+    <!-- ========================================================================= -->
+    <section id="view-mobile-app" class="hidden">
+      <div class="flex flex-col lg:flex-row items-center lg:items-start justify-center gap-10">
+        
+        <!-- Left: Feature Highlights for SIH Judges -->
+        <div class="lg:w-1/2 space-y-5">
+          <div class="inline-flex items-center space-x-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-bold">
+            <i class="fa-solid fa-mobile-screen"></i>
+            <span>Inspector Field Workstation (PWA)</span>
+          </div>
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            Tamper-Proof Field Verification with Cadastral Geofencing
+          </h2>
+          <p class="text-sm text-slate-600 leading-relaxed">
+            Eliminates paper forms, delayed couriers, and desk-based audit fraud. Inspectors receive unannounced tasks, authenticate presence within 150m cadastral geofences, complete checklists, capture stamped live photos, and record center in-charge signatures.
+          </p>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div class="p-3.5 bg-white rounded-xl border border-slate-200 shadow-sm flex items-start space-x-3">
+              <div class="p-2 rounded-lg bg-blue-50 text-blue-600 font-bold"><i class="fa-solid fa-location-dot"></i></div>
+              <div>
+                <h4 class="font-bold text-slate-900">150m Geofence Lock</h4>
+                <p class="text-slate-500 mt-0.5">Audit form unlocks only when GPS is within 150m of facility boundary.</p>
+              </div>
+            </div>
+
+            <div class="p-3.5 bg-white rounded-xl border border-slate-200 shadow-sm flex items-start space-x-3">
+              <div class="p-2 rounded-lg bg-purple-50 text-purple-600 font-bold"><i class="fa-solid fa-camera"></i></div>
+              <div>
+                <h4 class="font-bold text-slate-900">Live Geo-Watermarked Photo</h4>
+                <p class="text-slate-500 mt-0.5">Burns Lat, Long, UTC and ID into image. Pre-saved gallery uploads blocked.</p>
+              </div>
+            </div>
+
+            <div class="p-3.5 bg-white rounded-xl border border-slate-200 shadow-sm flex items-start space-x-3">
+              <div class="p-2 rounded-lg bg-emerald-50 text-emerald-600 font-bold"><i class="fa-solid fa-wifi"></i></div>
+              <div>
+                <h4 class="font-bold text-slate-900">100% Offline-First Queue</h4>
+                <p class="text-slate-500 mt-0.5">Works in remote cellular dead zones; auto-pushes when online.</p>
+              </div>
+            </div>
+
+            <div class="p-3.5 bg-white rounded-xl border border-slate-200 shadow-sm flex items-start space-x-3">
+              <div class="p-2 rounded-lg bg-amber-50 text-amber-600 font-bold"><i class="fa-solid fa-signature"></i></div>
+              <div>
+                <h4 class="font-bold text-slate-900">Touch Digital Signature</h4>
+                <p class="text-slate-500 mt-0.5">Canvas signature pad for center in-charge counter-signing.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Interactive Test Trigger Controls for Evaluator -->
+          <div class="p-4 bg-slate-900 rounded-2xl text-white space-y-3">
+            <span class="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center">
+              <i class="fa-solid fa-vial mr-2"></i> Evaluator Simulator Controls
+            </span>
+            <div class="flex flex-wrap gap-2 text-xs">
+              <button onclick="InspectorModule.simulateLocation('inside')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg font-semibold flex items-center">
+                <i class="fa-solid fa-location-crosshairs mr-1.5"></i> Simulate Inside Geofence (18m)
+              </button>
+              <button onclick="InspectorModule.simulateLocation('outside')" class="bg-red-600 hover:bg-red-500 text-white px-3 py-1.5 rounded-lg font-semibold flex items-center">
+                <i class="fa-solid fa-ban mr-1.5"></i> Simulate Breach Outside (620m)
+              </button>
+              <button onclick="InspectorModule.setOnlineStatus(!InspectorModule.isOnline)" class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-lg font-semibold flex items-center">
+                <i class="fa-solid fa-tower-broadcast mr-1.5"></i> Toggle Online / Dead Zone
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Mobile Device Frame Simulator -->
+        <div class="mobile-frame">
+          <div class="mobile-notch"></div>
+          
+          <!-- Mobile Status Header -->
+          <div class="bg-slate-900 text-white pt-7 pb-3 px-4 flex items-center justify-between text-[11px] border-b border-slate-800">
+            <div class="font-bold">09:41</div>
+            <div class="flex items-center space-x-2">
+              <span id="network-status-badge" class="text-[10px] font-semibold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded-full flex items-center">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-ping"></span> Online
+              </span>
+              <i class="fa-solid fa-wifi text-[10px]"></i>
+              <i class="fa-solid fa-battery-three-quarters text-[10px]"></i>
+            </div>
+          </div>
+
+          <!-- Offline Warning Banner -->
+          <div id="offline-notice-banner" style="display:none;" class="bg-amber-500 text-slate-900 px-3 py-1.5 text-[10px] font-bold flex items-center justify-between">
+            <span><i class="fa-solid fa-triangle-exclamation mr-1"></i> Offline Mode: Dead Zone Active</span>
+            <button onclick="InspectorModule.syncOfflineQueue()" class="bg-slate-900 text-white px-2 py-0.5 rounded text-[9px]">Sync Now</button>
+          </div>
+
+          <!-- Scrollable Mobile Content -->
+          <div class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar text-xs">
+            
+            <!-- Assigned Task Card -->
+            <div class="p-3.5 bg-blue-50 border border-blue-200 rounded-2xl">
+              <div class="flex items-center justify-between text-blue-900 font-bold mb-1">
+                <span>Active Assigned Task</span>
+                <span class="font-mono-code text-[10px] bg-blue-200 px-1.5 py-0.5 rounded">INSP-2026-091</span>
+              </div>
+              <h4 class="font-extrabold text-slate-900 text-sm">Birsa Munda Post-Matric Tribal Girls Hostel</h4>
+              <p class="text-slate-600 text-[11px] mt-0.5">Post-Matric Scholarship & Hostels • Ranchi</p>
+            </div>
+
+            <!-- Geofence Verification Status Box -->
+            <div id="geofence-status-box" class="p-3 rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-900 flex items-center justify-between">
+              <div class="flex items-center space-x-2.5">
+                <i id="geofence-lock-icon" class="fa-solid fa-lock-open text-emerald-600 text-base"></i>
+                <div>
+                  <div class="font-bold text-[11px]">150m Cadastral Geofence</div>
+                  <div id="geofence-dist-text" class="text-[10px] text-slate-600">18.2m from perimeter (Authorized)</div>
+                </div>
+              </div>
+              <span class="text-[10px] font-bold text-emerald-800 bg-emerald-200 px-2 py-0.5 rounded">Unlocked</span>
+            </div>
+
+            <!-- Lock Warning when outside -->
+            <div id="geofence-lock-warning" class="hidden p-3 rounded-xl bg-red-100 border border-red-300 text-red-800 text-[11px]">
+              <i class="fa-solid fa-ban mr-1 font-bold"></i>
+              <strong>Form Locked:</strong> You are currently outside the 150m perimeter. Move within boundary to enable checklist and submission.
+            </div>
+
+            <!-- Main Audit Form -->
+            <div id="inspector-form-container" class="space-y-3 transition-opacity">
+              
+              <!-- Headcount verification -->
+              <div class="bg-white p-3 rounded-xl border border-slate-200 space-y-1">
+                <label class="font-bold text-slate-700 block">Verified Physical Headcount</label>
+                <div class="flex items-center space-x-2">
+                  <input type="number" id="insp-headcount" value="142" class="w-full border border-slate-300 rounded-lg p-1.5 text-xs focus:ring-1 focus:ring-blue-600">
+                  <span class="text-[10px] text-slate-500 whitespace-nowrap">Enrolled: 150</span>
+                </div>
+              </div>
+
+              <!-- Compliance Checklist Grid -->
+              <div class="bg-white p-3 rounded-xl border border-slate-200 space-y-2">
+                <span class="font-bold text-slate-700 block">Compliance Checklist (1 to 5 Stars)</span>
+                
+                <div class="flex justify-between items-center text-[11px]">
+                  <span>Hygiene & Water:</span>
+                  <select id="insp-hygiene" class="border border-slate-300 rounded p-1 text-xs">
+                    <option value="5">★★★★★ (5)</option>
+                    <option value="4" selected>★★★★☆ (4)</option>
+                    <option value="3">★★★☆☆ (3)</option>
+                    <option value="2">★★☆☆☆ (2)</option>
+                    <option value="1">★☆☆☆☆ (1)</option>
+                  </select>
+                </div>
+
+                <div class="flex justify-between items-center text-[11px]">
+                  <span>Building & Fire Safety:</span>
+                  <select id="insp-infra" class="border border-slate-300 rounded p-1 text-xs">
+                    <option value="5">★★★★★ (5)</option>
+                    <option value="4" selected>★★★★☆ (4)</option>
+                    <option value="3">★★★☆☆ (3)</option>
+                  </select>
+                </div>
+
+                <div class="flex justify-between items-center text-[11px]">
+                  <span>Food & Nutrition:</span>
+                  <select id="insp-food" class="border border-slate-300 rounded p-1 text-xs">
+                    <option value="5">★★★★★ (5)</option>
+                    <option value="4" selected>★★★★☆ (4)</option>
+                    <option value="3">★★★☆☆ (3)</option>
+                  </select>
+                </div>
+
+                <div class="flex justify-between items-center text-[11px]">
+                  <span>Staff Attendance:</span>
+                  <select id="insp-staff" class="border border-slate-300 rounded p-1 text-xs">
+                    <option value="5">★★★★★ (5)</option>
+                    <option value="4" selected>★★★★☆ (4)</option>
+                    <option value="3">★★★☆☆ (3)</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Camera Capture with Burned Watermark -->
+              <div class="bg-white p-3 rounded-xl border border-slate-200 space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="font-bold text-slate-700">Geo-Watermarked Photographic Proof</span>
+                  <span class="text-[9px] text-slate-400">Direct Camera (Gallery Blocked)</span>
+                </div>
+                
+                <div class="border border-slate-300 rounded-lg overflow-hidden bg-slate-900">
+                  <canvas id="watermark-photo-canvas" width="300" height="150" class="w-full h-auto block"></canvas>
+                </div>
+
+                <button onclick="InspectorModule.captureWatermarkedPhoto()" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-semibold py-1.5 rounded-lg text-xs flex items-center justify-center">
+                  <i class="fa-solid fa-camera mr-1.5"></i> Snap Geo-Stamped Photo
+                </button>
+                <div id="photo-capture-status" class="text-[10px] text-slate-500 text-center">Ready to capture site evidence</div>
+              </div>
+
+              <!-- Digital Touch Signature Pad -->
+              <div class="bg-white p-3 rounded-xl border border-slate-200 space-y-1.5">
+                <div class="flex items-center justify-between">
+                  <span class="font-bold text-slate-700">Center In-Charge Signature</span>
+                  <button onclick="InspectorModule.clearSignature()" class="text-[10px] text-blue-600 underline">Clear</button>
+                </div>
+                <div class="border border-dashed border-slate-300 rounded-lg bg-slate-50">
+                  <canvas id="signature-pad" width="300" height="90" class="w-full h-24 touch-none cursor-crosshair"></canvas>
+                </div>
+                <span class="text-[9px] text-slate-400 block text-center">Sign above using finger touch or mouse</span>
+              </div>
+
+              <!-- Remarks -->
+              <div class="bg-white p-3 rounded-xl border border-slate-200 space-y-1">
+                <label class="font-bold text-slate-700 block">Officer Notes & Observations</label>
+                <textarea id="insp-remarks" rows="2" class="w-full border border-slate-300 rounded-lg p-1.5 text-xs focus:ring-1 focus:ring-blue-600">Physical inspection conducted. Safe drinking water verified and registers cross-checked.</textarea>
+              </div>
+
+              <!-- Submit Button -->
+              <button onclick="InspectorModule.handleFormSubmission()" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3 rounded-xl text-xs shadow-md transition flex items-center justify-center">
+                <i class="fa-solid fa-shield-check mr-2"></i> Submit & Seal Audit Dossier
+              </button>
+
+              <!-- Offline Queue Counter -->
+              <div class="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+                <span>Queued Offline: <strong id="offline-queue-count" class="text-blue-700">0</strong> items</span>
+                <button onclick="InspectorModule.syncOfflineQueue()" class="text-blue-600 underline font-semibold">Sync Queue</button>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- SECTION 3: GIS COMMAND CENTER MAP VIEW                                    -->
+    <!-- ========================================================================= -->
+    <section id="view-gis-map" class="hidden space-y-4">
+      <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 class="text-base font-bold text-slate-900 flex items-center">
+            <i class="fa-solid fa-map-location-dot text-blue-600 mr-2"></i>
+            GIS Spatial Monitoring Command Hub
+          </h2>
+          <p class="text-xs text-slate-500">Live GPS telemetry of field inspectors & 150m cadastral geofences across Jharkhand</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="GisModule.recenterHub()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs px-3 py-1.5 rounded-lg font-semibold flex items-center">
+            <i class="fa-solid fa-crosshairs mr-1.5"></i> Recenter Ranchi PMU
+          </button>
+          <button onclick="GisModule.toggleGeofences()" class="bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs px-3 py-1.5 rounded-lg font-semibold flex items-center">
+            <i class="fa-solid fa-circle-notch mr-1.5"></i> Toggle Geofences
+          </button>
+        </div>
+      </div>
+
+      <!-- Leaflet Map Canvas -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden h-[540px] relative">
+        <div id="gis-map-canvas" class="w-full h-full"></div>
+      </div>
+
+      <!-- Legend & Inspector Roster -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+        <div class="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
+          <h4 class="font-bold text-slate-900 mb-2">Map Legend</h4>
+          <div class="space-y-1.5">
+            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-emerald-500 mr-2"></span> Low Risk Facility (&lt; 2.0)</div>
+            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-amber-500 mr-2"></span> Moderate Risk Facility (2.0 - 3.5)</div>
+            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-red-500 mr-2"></span> High Risk / Flagged (&gt; 3.5)</div>
+            <div class="flex items-center"><span class="w-3 h-3 rounded-full border border-blue-500 bg-blue-100 mr-2"></span> 150m Cadastral Geofence Ring</div>
+          </div>
+        </div>
+
+        <div class="md:col-span-2 p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
+          <h4 class="font-bold text-slate-900 mb-2">Active Field PMU Personnel</h4>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+            <div class="p-2 bg-slate-50 rounded-lg border border-slate-100 flex items-center justify-between">
+              <div>
+                <strong>Vikram Sharma</strong> (Senior Officer)
+                <div class="text-slate-500">Ranchi • Birsa Munda Hostel</div>
+              </div>
+              <span class="text-blue-700 font-bold">On-Duty</span>
+            </div>
+            <div class="p-2 bg-slate-50 rounded-lg border border-slate-100 flex items-center justify-between">
+              <div>
+                <strong>Neha Singh</strong> (Vigilance Inspector)
+                <div class="text-slate-500">Deoghar • Divyangjan Centre</div>
+              </div>
+              <span class="text-emerald-700 font-bold">On-Site</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- SECTION 4: AI ANTI-COLLUSION RANDOMIZER VIEW                              -->
+    <!-- ========================================================================= -->
+    <section id="view-ai-assign" class="hidden space-y-6">
+      <div class="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 rounded-2xl p-6 text-white shadow-xl">
+        <div class="flex items-center space-x-2 mb-2">
+          <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-400 text-purple-950 uppercase">Anti-Collusion AI Engine</span>
+          <span class="text-purple-300 text-xs">• Unannounced Surprise Dispatch</span>
+        </div>
+        <h2 class="text-xl sm:text-2xl font-extrabold">Autonomous Randomizer Algorithm</h2>
+        <p class="text-xs sm:text-sm text-slate-300 max-w-2xl mt-1">
+          Eliminates bribery, institutional collusion, and advance leaks by mathematically pairing high-risk facilities with unpredictable field officers and assigning strict, countdown-enforced arrival windows.
+        </p>
+
+        <div class="mt-5 flex items-center gap-3">
+          <button id="btn-run-randomizer" onclick="App.triggerAiRandomizer()" class="bg-purple-500 hover:bg-purple-400 text-slate-950 font-extrabold text-xs px-5 py-3 rounded-xl shadow-lg transition flex items-center">
+            <i class="fa-solid fa-dice mr-2 text-base"></i> Execute AI Randomizer Algorithm
+          </button>
+        </div>
+      </div>
+
+      <!-- Real-time Dispatched Result Card -->
+      <div id="ai-dispatch-result-card" class="hidden"></div>
+
+      <!-- Algorithmic Criteria Breakdown -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+        <div class="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-2">
+          <div class="w-8 h-8 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center font-bold"><i class="fa-solid fa-chart-line"></i></div>
+          <h4 class="font-bold text-slate-900 text-sm">Institutional Risk Score</h4>
+          <p class="text-slate-600">Weighted calculation combining previous non-compliance violations, grievance frequency, and time elapsed since last routine audit.</p>
+        </div>
+
+        <div class="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-2">
+          <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold"><i class="fa-solid fa-compass"></i></div>
+          <h4 class="font-bold text-slate-900 text-sm">Proximity & Unpredictability</h4>
+          <p class="text-slate-600">Inspectors within a 20–50km radius are selected using anti-repetition rotation to guarantee inspectors never audit the same center consecutively.</p>
+        </div>
+
+        <div class="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-2">
+          <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold"><i class="fa-solid fa-key"></i></div>
+          <h4 class="font-bold text-slate-900 text-sm">Cryptographic Dispatch Token</h4>
+          <p class="text-slate-600">Generates unique SHA-256 tokens sent to the inspector's device only upon departure, with a strict 45–60 minute countdown timer.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- SECTION 5: LIVE CCTV & SURVEILLANCE INTELLIGENCE HUB                       -->
+    <!-- ========================================================================= -->
+    <section id="view-cctv-feed" class="hidden space-y-6">
+      <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 class="text-base font-bold text-slate-900 flex items-center">
+            <i class="fa-solid fa-video text-blue-600 mr-2"></i>
+            Live CCTV Feeds & AI Headcount Corroboration
+          </h2>
+          <p class="text-xs text-slate-500">Computer vision cross-checks real-time stream attendance against reported field rosters</p>
+        </div>
+        <div class="flex items-center space-x-2">
+          <span class="text-xs text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full font-bold flex items-center">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 mr-1.5 animate-ping"></span> 8 Streams Active
+          </span>
+        </div>
+      </div>
+
+      <!-- CCTV Streams Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="cctv-grid-container"></div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- SECTION 6: CITIZEN TRANSPARENCY & WHISTLEBLOWER PORTAL                    -->
+    <!-- ========================================================================= -->
+    <section id="view-citizen" class="hidden space-y-6">
+      <!-- Verifier Box -->
+      <div class="bg-gradient-to-r from-blue-900 to-slate-900 rounded-2xl p-6 text-white shadow-xl space-y-4">
+        <div>
+          <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-400 text-slate-950 uppercase">Public Audit Gateway</span>
+          <h2 class="text-xl sm:text-2xl font-extrabold mt-1">Cryptographic SHA-256 Audit Dossier Verifier</h2>
+          <p class="text-xs sm:text-sm text-slate-300 max-w-2xl mt-0.5">
+            Beneficiaries, journalists, and public auditors can instantly verify any inspection report against the Ministry's immutable cryptographic registry.
+          </p>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-2 max-w-3xl">
+          <input type="text" id="citizen-verify-input" placeholder="Enter Inspection ID (e.g., INSP-2026-088) or SHA-256 Hash..." class="flex-1 bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-blue-400">
+          <button onclick="CitizenModule.verifyAuditHash()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-6 py-2.5 rounded-xl transition flex items-center justify-center">
+            <i class="fa-solid fa-shield-check mr-2"></i> Verify Authenticity
+          </button>
+        </div>
+
+        <!-- Verification Results Box -->
+        <div id="citizen-verify-result" class="hidden"></div>
+      </div>
+
+      <!-- Whistleblower & Grievance Section -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left: Submit Whistleblower Report -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+          <h3 class="font-extrabold text-slate-900 text-sm flex items-center">
+            <i class="fa-solid fa-bullhorn text-amber-500 mr-2"></i> Citizen Whistleblower Reporting
+          </h3>
+          <p class="text-xs text-slate-500">Report fake centers, ghost beneficiaries, poor food, or absenteeism directly to MoSJE vigilance.</p>
+
+          <form id="grievance-form" onsubmit="CitizenModule.handleGrievanceSubmit(event)" class="space-y-3 text-xs">
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Target Facility / Institution</label>
+              <select id="grv-facility" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-1 focus:ring-blue-600">
+                <option value="Dr. Ambedkar Residential SC Boys Hostel">Dr. Ambedkar Residential SC Boys Hostel (Ranchi)</option>
+                <option value="Birsa Munda Post-Matric Tribal Girls Hostel">Birsa Munda Tribal Girls Hostel (Ranchi)</option>
+                <option value="Divyangjan Composite Regional Centre">Divyangjan CRC (Deoghar)</option>
+                <option value="Sanjivani Integrated De-Addiction Center">Sanjivani IRCA (Hazaribagh)</option>
+                <option value="Prerna Skill Training Centre">Prerna Skill Centre (Jamshedpur)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Violation Category</label>
+              <select id="grv-category" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-1 focus:ring-blue-600">
+                <option value="Food & Nutrition Quality">Food & Nutrition Quality</option>
+                <option value="Headcount / Ghost Beneficiaries">Headcount / Ghost Beneficiaries</option>
+                <option value="Staff Absenteeism">Staff Absenteeism</option>
+                <option value="Sanitation & Hygiene">Sanitation & Hygiene</option>
+                <option value="Infrastructural Neglect">Infrastructural Neglect</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Subject</label>
+              <input type="text" id="grv-subject" placeholder="Brief summary of issue" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-1 focus:ring-blue-600">
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Detailed Description</label>
+              <textarea id="grv-description" rows="3" placeholder="Provide ground details..." class="w-full border border-slate-300 rounded-lg p-2 focus:ring-1 focus:ring-blue-600"></textarea>
+            </div>
+
+            <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 rounded-xl transition">
+              Submit Whistleblower Report
+            </button>
+          </form>
+        </div>
+
+        <!-- Right: Public Grievance Feed with Upvotes -->
+        <div class="lg:col-span-2 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="font-extrabold text-slate-900 text-sm flex items-center">
+              <i class="fa-solid fa-list-check text-blue-600 mr-2"></i> Public Grievance Priority Ledger
+            </h3>
+            <span class="text-xs text-slate-500">Ranked by Community Upvotes</span>
+          </div>
+
+          <div class="space-y-3" id="citizen-grievances-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- SECTION 7: AUDIT DOSSIERS VIEW                                            -->
+    <!-- ========================================================================= -->
+    <section id="view-reports" class="hidden space-y-4">
+      <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 class="text-base font-bold text-slate-900 flex items-center">
+            <i class="fa-solid fa-file-contract text-blue-600 mr-2"></i>
+            Cryptographically Sealed Audit Dossiers
+          </h2>
+          <p class="text-xs text-slate-500">CAG and parliamentary ready digital records with SHA-256 verification and geofence proof</p>
+        </div>
+        <button onclick="App.exportCSV()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-4 py-2 rounded-xl font-semibold flex items-center">
+          <i class="fa-solid fa-file-csv mr-2"></i> Export All Records (CSV)
+        </button>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+              <tr>
+                <th class="p-3.5">Dossier ID</th>
+                <th class="p-3.5">Facility & Scheme</th>
+                <th class="p-3.5">Field Inspector</th>
+                <th class="p-3.5">Audit Type</th>
+                <th class="p-3.5">Geofence Status</th>
+                <th class="p-3.5">SHA-256 Fingerprint</th>
+                <th class="p-3.5 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100" id="reports-table-body">
+              <tr class="hover:bg-slate-50 text-xs">
+                <td class="p-3.5 font-mono-code font-bold text-blue-700">INSP-2026-088</td>
+                <td class="p-3.5">
+                  <div class="font-bold">Kasturba Gandhi Balika Residential School</div>
+                  <div class="text-[10px] text-slate-500">Bokaro • PM-AJAY</div>
+                </td>
+                <td class="p-3.5">Rajesh Kumar</td>
+                <td class="p-3.5"><span class="px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-semibold">Routine</span></td>
+                <td class="p-3.5 text-emerald-700 font-semibold">✓ Verified (14.2m)</td>
+                <td class="p-3.5 font-mono-code text-[10px] text-slate-600">a8f5e13b890123...</td>
+                <td class="p-3.5 text-right">
+                  <button onclick="App.viewDossier('INSP-2026-088')" class="bg-blue-600 text-white px-2.5 py-1 rounded text-[11px] font-semibold">
+                    Inspect Dossier
+                  </button>
+                </td>
+              </tr>
+              <tr class="hover:bg-slate-50 text-xs">
+                <td class="p-3.5 font-mono-code font-bold text-blue-700">INSP-2026-089</td>
+                <td class="p-3.5">
+                  <div class="font-bold">Dr. Ambedkar Residential SC Boys Hostel</div>
+                  <div class="text-[10px] text-slate-500">Ranchi • PM-AJAY</div>
+                </td>
+                <td class="p-3.5">Vikram Sharma</td>
+                <td class="p-3.5"><span class="px-2 py-0.5 rounded bg-purple-100 text-purple-800 font-semibold">Surprise</span></td>
+                <td class="p-3.5 text-emerald-700 font-semibold">✓ Verified (18.5m)</td>
+                <td class="p-3.5 font-mono-code text-[10px] text-slate-600">9c23d45e678901...</td>
+                <td class="p-3.5 text-right">
+                  <button onclick="App.viewDossier('INSP-2026-089')" class="bg-blue-600 text-white px-2.5 py-1 rounded text-[11px] font-semibold">
+                    Inspect Dossier
+                  </button>
+                </td>
+              </tr>
+              <tr class="hover:bg-slate-50 text-xs">
+                <td class="p-3.5 font-mono-code font-bold text-red-600">INSP-2026-090</td>
+                <td class="p-3.5">
+                  <div class="font-bold">Prerna Skill Training Centre for SC Youth</div>
+                  <div class="text-[10px] text-slate-500">Jamshedpur • PM-DAKSH</div>
+                </td>
+                <td class="p-3.5">Priya Verma</td>
+                <td class="p-3.5"><span class="px-2 py-0.5 rounded bg-purple-100 text-purple-800 font-semibold">Surprise</span></td>
+                <td class="p-3.5 text-red-600 font-semibold">⚠ Deviation (620m)</td>
+                <td class="p-3.5 font-mono-code text-[10px] text-slate-600">e712a3456bcdef...</td>
+                <td class="p-3.5 text-right">
+                  <button onclick="App.viewDossier('INSP-2026-090')" class="bg-red-600 text-white px-2.5 py-1 rounded text-[11px] font-semibold">
+                    Inspect Dossier
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: AUDIT DOSSIER VIEWER                                               -->
+  <!-- ========================================================================= -->
+  <div id="dossier-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+    <div class="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl custom-scrollbar" id="dossier-modal-content"></div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/api.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/inspector.js"></script>
+  <script src="js/citizen.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

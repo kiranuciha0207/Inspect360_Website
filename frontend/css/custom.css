@@ -1,0 +1,102 @@
+/* Inspect360 Custom Styles & Animations */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  --primary-navy: #0f172a;
+  --accent-blue: #0284c7;
+  --gov-orange: #ea580c;
+  --gov-green: #15803d;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  scroll-behavior: smooth;
+}
+
+.font-mono-code {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Phone Frame Simulator */
+.mobile-frame {
+  width: 380px;
+  max-width: 100%;
+  height: 760px;
+  border-radius: 42px;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35), 0 0 0 10px #1e293b, 0 0 0 12px #334155;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background-color: #ffffff;
+}
+
+.mobile-notch {
+  width: 140px;
+  height: 22px;
+  background: #1e293b;
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+  z-index: 50;
+}
+
+/* Custom Scrollbars */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(241, 245, 249, 0.6);
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8;
+}
+
+/* Radar Pulse for Live Status */
+.radar-pulse {
+  position: relative;
+}
+.radar-pulse::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  background: inherit;
+  border-radius: inherit;
+  animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+/* Badges and Geofence status */
+.geofence-locked {
+  background-color: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+.geofence-unlocked {
+  background-color: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
+/* Leaflet Map overrides */
+.leaflet-popup-content-wrapper {
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}

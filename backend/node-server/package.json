@@ -1,0 +1,20 @@
+{
+  "name": "inspect360-node-backend",
+  "version": "1.0.0",
+  "description": "Inspect360 Node.js / Express & PostGIS Backend Engine for SIH26095 MoSJE",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "pg": "^8.11.5",
+    "uuid": "^9.0.1"
+  },
+  "keywords": ["sih2026", "mosje", "postgis", "express", "node", "inspect360"],
+  "author": "Team Smart Inspect (AMP2026018)",
+  "license": "ISC"
+}
